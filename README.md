@@ -1,6 +1,7 @@
 # aws-summarize-account-activity
 
-Analyzes CloudTrail data of a given AWS account and generates a summary of recently active IAM principals, API calls they made and regions that were used. The summary is written to a JSON output file. 
+Analyzes CloudTrail data of a given AWS account and generates a summary of recently active IAM principals, API calls they made and regions that were used. The summary is written to a JSON output file. See the accompanying blog post 
+[here](https://medium.com/@michael.kirchner/how-to-get-an-overview-of-activities-going-on-within-an-aws-account-cb1608076819). 
 
 
 ## Usage
