@@ -23,7 +23,7 @@ python aws_summarize_account_activity.py
 
 All arguments are optional:
 
-```bash
+```
 --past-hours HOURS   hours of CloudTrail data to look back and analyze
                      default: 336 (=14 days), minimum: 1, maximum: 2160 (=90 days)
 --threads THREADS    number of threads to use (one thread analyzes one region)
@@ -43,6 +43,7 @@ All arguments are optional:
 * Using the `LookupEvents` action comes with the drawback that AWS throttles the API to two requests per second. The script will thus need proportionally more time for AWS accounts with lots of AWS API activity. If the script takes too long for your use case, consider reducing the timeframe of data analyzed via the `--past-hours` argument. Alternatively, if you are in the position to make changes to the AWS account, analyze large amounts of CloudTrail data using AWS Athena or CloudTrail Lake:
 
   https://docs.aws.amazon.com/athena/latest/ug/cloudtrail-logs.html
+  
   https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-lake.html
 
 * The script analyzes management events that were logged to CloudTrail. Please note that there are some AWS API actions that do not get logged: CloudTrail logging support varies from service to service. Similarly, the script analyzes all regions that are currently enabled in the target account. If a region was used in the past 90 days, but is now disabled, the script cannot access the respective CloudTrail data any more.
