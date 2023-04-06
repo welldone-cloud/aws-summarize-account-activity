@@ -77,20 +77,20 @@ def add_cloudtrail_entries_to_result_collection(regional_cloudtrail_activity, re
             count = cloudtrail_entries[principal][api_call]
 
             try:
-                result_collection["activity_by_principal"][principal][api_call] += count
+                result_collection["api_calls_by_principal"][principal][api_call] += count
             except KeyError:
-                if principal not in result_collection["activity_by_principal"]:
-                    result_collection["activity_by_principal"][principal] = {}
-                if api_call not in result_collection["activity_by_principal"][principal]:
-                    result_collection["activity_by_principal"][principal][api_call] = count
+                if principal not in result_collection["api_calls_by_principal"]:
+                    result_collection["api_calls_by_principal"][principal] = {}
+                if api_call not in result_collection["api_calls_by_principal"][principal]:
+                    result_collection["api_calls_by_principal"][principal][api_call] = count
 
             try:
-                result_collection["activity_by_region"][region][api_call] += count
+                result_collection["api_calls_by_region"][region][api_call] += count
             except KeyError:
-                if region not in result_collection["activity_by_region"]:
-                    result_collection["activity_by_region"][region] = {}
-                if api_call not in result_collection["activity_by_region"][region]:
-                    result_collection["activity_by_region"][region][api_call] = count
+                if region not in result_collection["api_calls_by_region"]:
+                    result_collection["api_calls_by_region"][region] = {}
+                if api_call not in result_collection["api_calls_by_region"][region]:
+                    result_collection["api_calls_by_region"][region][api_call] = count
 
 
 def parse_argument_past_hours(val):
@@ -176,16 +176,18 @@ if __name__ == "__main__":
                 "from_timestamp": from_timestamp_str,
                 "to_timestamp": run_timestamp_str,
             },
-            "regions": enabled_regions,
+            "regions_enabled": enabled_regions,
+            "regions_failed": {},
             "run_timestamp": run_timestamp_str,
         },
-        "activity_by_principal": {},
-        "activity_by_region": {},
+        "api_calls_by_principal": {},
+        "api_calls_by_region": {},
     }
 
     # Collect CloudTrail data from all enabled regions
     with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
         futures = []
+        future_to_region_mapping = {}
         for region in enabled_regions:
             future = executor.submit(
                 get_cloudtrail_entries_from_region,
@@ -195,9 +197,16 @@ if __name__ == "__main__":
                 run_timestamp,
             )
             futures.append(future)
+            future_to_region_mapping[future] = region
 
         for future in concurrent.futures.as_completed(futures):
-            add_cloudtrail_entries_to_result_collection(future.result(), result_collection)
+            try:
+                add_cloudtrail_entries_to_result_collection(future.result(), result_collection)
+            except Exception as ex:
+                error_message = ex.response["Error"]["Code"]
+                region = future_to_region_mapping[future]
+                print("Failed reading data from region {}: {}".format(region, error_message))
+                result_collection["_metadata"]["regions_failed"][region] = error_message
 
     # Write result file
     output_file_name = "account_activity_{}_{}.json".format(sts_response["Account"], run_timestamp_str)

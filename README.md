@@ -41,7 +41,7 @@ All arguments are optional:
 
   This approach has the advantage that it does not require any specific configuration to be present in the target account. There is no need for CloudTrail to be actively enabled or configured in a certain way (e.g., logging to S3 or CloudWatch). Instead, the script analyzes the CloudTrail event history that is available by default and covers the past 90 days.
   
-* Using the `LookupEvents` action comes with the drawback that AWS throttles the API to two requests per second. The script will thus need proportionally more time for AWS accounts with lots of AWS API activity. If the script takes too long for your use case, consider reducing the timeframe of data analyzed via the `--past-hours` argument. Alternatively, if you are in the position to make changes to the AWS account, analyze large amounts of CloudTrail data using AWS Athena or CloudTrail Lake:
+* Using the `LookupEvents` action comes with the drawback that AWS throttles the API to two requests per second. The script will thus need proportionally more time for AWS accounts with lots of AWS API call activity. If the script takes too long for your use case, consider reducing the timeframe of data analyzed via the `--past-hours` argument. Alternatively, if you are in the position to make changes to the AWS account, analyze large amounts of CloudTrail data using AWS Athena or CloudTrail Lake:
 
   https://docs.aws.amazon.com/athena/latest/ug/cloudtrail-logs.html
   
@@ -83,7 +83,7 @@ Truncated example JSON output file:
       "from_timestamp": "20230315135630",
       "to_timestamp": "20230329135630"
     },
-    "regions": [
+    "regions_enabled": [
       "af-south-1",
       "ap-northeast-1",
       "ap-northeast-2",
@@ -103,9 +103,10 @@ Truncated example JSON output file:
       "us-west-1",
       "us-west-2"
     ],
+    "regions_failed": {},
     "run_timestamp": "20230329135630"
   },
-  "activity_by_principal": {
+  "api_calls_by_principal": {
     "123456789012": {
       "ssm.amazonaws.com:OpenDataChannel": 6
     },
@@ -153,7 +154,7 @@ Truncated example JSON output file:
     },
     // ...
   },
-  "activity_by_region": {
+  "api_calls_by_region": {
     "af-south-1": {
       "cloudtrail.amazonaws.com:LookupEvents": 2
     },
