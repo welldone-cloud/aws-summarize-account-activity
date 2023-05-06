@@ -1,1 +1,2 @@
 boto3>=1.26.98
+matplotlib>=3.7.1

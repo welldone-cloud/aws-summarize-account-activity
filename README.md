@@ -1,6 +1,6 @@
 # aws-summarize-account-activity
 
-Analyzes CloudTrail data of a given AWS account and generates a summary of recently active IAM principals, API calls they made and regions that were used. The summary is written to a JSON output file. See the accompanying blog post 
+Analyzes CloudTrail data of a given AWS account and generates a summary of recently active IAM principals, API calls they made and regions that were used. The summary is written to a JSON output file and can optionally be visualized as PNG files. See the accompanying blog post 
 [here](https://medium.com/@michael.kirchner/how-to-get-an-overview-of-activities-going-on-within-an-aws-account-cb1608076819). 
 
 
@@ -16,7 +16,7 @@ Example run:
 ```bash
 pip install -r requirements.txt
 
-python aws_summarize_account_activity.py
+python aws_summarize_account_activity.py --plot-results
 ```
 
 
@@ -27,9 +27,10 @@ All arguments are optional:
 ```
 --past-hours HOURS   hours of CloudTrail data to look back and analyze
                      default: 336 (=14 days), minimum: 1, maximum: 2160 (=90 days)
+--plot-results       generate PNG files that visualize the JSON output file
+--profile PROFILE    named AWS profile to use when running the command
 --threads THREADS    number of threads to use (one thread analyzes one region)
                      default: 8, minimum: 1, maximum: 32
---profile PROFILE    named profile to use when running the command
 ```
 
 
@@ -192,3 +193,20 @@ Truncated example JSON output file:
   }
 }
 ```
+
+
+## Example visualizations
+
+When using the optional `--plot-results` argument, visualizations of the API call activity are generated as PNG files. 
+
+Example distribution of API calls across regions:
+![](./example_plots/api_calls_per_region.png)
+
+Example distribution of API calls within a specific region:
+![](./example_plots/region_activity.png)
+
+Example distribution of API calls across principals:
+![](./example_plots/api_calls_per_principal.png)
+
+Example distribution of API calls of a specific principal:
+![](./example_plots/principal_activity.png)
