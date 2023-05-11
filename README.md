@@ -16,7 +16,7 @@ Example run:
 ```bash
 pip install -r requirements.txt
 
-python aws_summarize_account_activity.py --plot-results
+python aws_summarize_account_activity.py
 ```
 
 
