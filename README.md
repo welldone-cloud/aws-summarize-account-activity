@@ -210,3 +210,12 @@ Example distribution of API calls across principals:
 
 Example distribution of API calls of a specific principal:
 ![](./example_plots/principal_activity.png)
+
+
+## Generating visualizations retroactively
+If you have a JSON output file from a previous run and want to generate the respective PNG visualizations for it, you can do so via:
+
+```bash
+python generate_plots_for_existing_json_file.py --file account_activity_123456789012_20230329135630.json
+```
+
