@@ -12,7 +12,7 @@ import sys
 
 AWS_DEFAULT_REGION = "us-east-1"
 
-BOTO_CONFIG = botocore.config.Config(retries={"total_max_attempts": 5, "mode": "standard"})
+BOTO_CLIENT_CONFIG = botocore.config.Config(retries={"total_max_attempts": 5, "mode": "standard"})
 
 PLOT_CANVAS_SIZE = (14, 8)
 
@@ -24,28 +24,28 @@ PLOT_MAX_LENGTH_X_AXIS_LABELS = 85
 
 TIMESTAMP_FORMAT = "%Y%m%d%H%M%S"
 
-SHOW_STATUS_MESSAGE_AFTER_NUMBER_OF_ENTRIES = 1000
+SHOW_STATUS_MESSAGE_AFTER_NUMBER_OF_CLOUDTRAIL_ENTRIES = 1000
 
 
-def get_cloudtrail_entries_from_region(boto_session, region, from_timestamp, to_timestamp):
+def get_cloudtrail_entries_from_region(region, from_timestamp, to_timestamp):
     """
-    Returns a tuple describing the region and the regional activity recorded in CloudTrail, for the given
-    region and timeframe: (str(region), dict(principal) -> dict(api_call) -> int(count))
+    Returns a nested dict describing the regional activity recorded in CloudTrail, for the given region and timeframe:
+    cloudtrail_entries[principal][api_call] = count
     """
-    cloudtrail_client = boto_session.client("cloudtrail", config=BOTO_CONFIG, region_name=region)
-    cloudtrail_paginator = cloudtrail_client.get_paginator("lookup_events")
-    response_iterator = cloudtrail_paginator.paginate(StartTime=from_timestamp, EndTime=to_timestamp)
-
     cloudtrail_entries = {}
+    boto_session = boto3.session.Session(profile_name=profile, region_name=region)
+    cloudtrail_client = boto_session.client("cloudtrail", config=BOTO_CLIENT_CONFIG)
+
+    cloudtrail_paginator = cloudtrail_client.get_paginator("lookup_events")
     number_of_cloudtrail_entries_processed = 0
-    for response_page in response_iterator:
+    for response_page in cloudtrail_paginator.paginate(StartTime=from_timestamp, EndTime=to_timestamp):
         for event in response_page["Events"]:
-            if number_of_cloudtrail_entries_processed % SHOW_STATUS_MESSAGE_AFTER_NUMBER_OF_ENTRIES == 0:
+            if number_of_cloudtrail_entries_processed % SHOW_STATUS_MESSAGE_AFTER_NUMBER_OF_CLOUDTRAIL_ENTRIES == 0:
                 print("Reading data from region {}".format(region))
 
             event_detail = json.loads(event["CloudTrailEvent"])
 
-            # Extract event details: principal and api_call
+            # Extract "principal" information from the event
             if "arn" in event_detail["userIdentity"]:
                 principal = event_detail["userIdentity"]["arn"]
             elif "invokedBy" in event_detail["userIdentity"]:
@@ -59,6 +59,7 @@ def get_cloudtrail_entries_from_region(boto_session, region, from_timestamp, to_
             else:
                 principal = event_detail["userIdentity"]["type"]
 
+            # Extract "api_call" information from the event
             api_call = "{}:{}".format(event_detail["eventSource"], event_detail["eventName"])
 
             # Add to regional result collection
@@ -73,18 +74,18 @@ def get_cloudtrail_entries_from_region(boto_session, region, from_timestamp, to_
             number_of_cloudtrail_entries_processed += 1
 
     print("Finished region {}".format(region))
-    return (region, cloudtrail_entries)
+    return cloudtrail_entries
 
 
-def add_cloudtrail_entries_to_result_collection(regional_cloudtrail_activity, result_collection):
+def add_cloudtrail_entries_to_result_collection(region, regional_cloudtrail_activity):
     """
-    Adds the given tuple describing regional activity recorded in CloudTrail to the overall collection of results.
+    Adds the given regional activity recorded in CloudTrail to the overall result collection.
     """
-    region, cloudtrail_entries = regional_cloudtrail_activity
-    for principal in cloudtrail_entries:
-        for api_call in cloudtrail_entries[principal]:
-            count = cloudtrail_entries[principal][api_call]
+    for principal in regional_cloudtrail_activity:
+        for api_call in regional_cloudtrail_activity[principal]:
+            count = regional_cloudtrail_activity[principal][api_call]
 
+            # Add to principal results
             try:
                 result_collection["api_calls_by_principal"][principal][api_call] += count
             except KeyError:
@@ -93,6 +94,7 @@ def add_cloudtrail_entries_to_result_collection(regional_cloudtrail_activity, re
                 if api_call not in result_collection["api_calls_by_principal"][principal]:
                     result_collection["api_calls_by_principal"][principal][api_call] = count
 
+            # Add to regional results
             try:
                 result_collection["api_calls_by_region"][region][api_call] += count
             except KeyError:
@@ -185,9 +187,9 @@ def str_to_filename(val):
 
 def truncate_str(val, max_length, truncation_sequence="[...]"):
     """
-    Returns the given string truncated at the given maximum length. If truncation was applied, the given sequence is
-    put as an indication at the end of the string. If the given string does not exceed the maximum length, it is
-    returned without changes.
+    Returns the given string truncated at the given maximum length. If truncation was applied, the given truncation
+    sequence is put as an indication at the end of the string. If the given string does not exceed the maximum length,
+    it is returned without changes.
     """
     if len(val) > max_length:
         return val[0 : max_length - len(truncation_sequence)] + truncation_sequence
@@ -216,16 +218,6 @@ def parse_argument_past_hours(val):
     if not 1 <= hours <= 2160:
         raise argparse.ArgumentTypeError("Invalid value for argument")
     return hours
-
-
-def parse_argument_threads(val):
-    """
-    Argument validator.
-    """
-    threads = int(val)
-    if not 1 <= threads <= 32:
-        raise argparse.ArgumentTypeError("Invalid value for argument")
-    return threads
 
 
 if __name__ == "__main__":
@@ -257,34 +249,27 @@ if __name__ == "__main__":
         nargs=1,
         help="named AWS profile to use when running the command",
     )
-    parser.add_argument(
-        "--threads",
-        required=False,
-        nargs=1,
-        default=[8],
-        type=parse_argument_threads,
-        help="number of threads to use (one thread analyzes one region), default: 8, minimum: 1, maximum: 32",
-    )
     args = parser.parse_args()
     past_hours = args.past_hours[0]
     plot_results = args.plot_results
     profile = args.profile[0] if args.profile else None
-    boto_session = boto3.session.Session(profile_name=profile)
-    threads = args.threads[0]
+
+    boto_session = boto3.session.Session(profile_name=profile, region_name=AWS_DEFAULT_REGION)
 
     # Test for valid credentials
-    sts_client = boto_session.client("sts", config=BOTO_CONFIG, region_name=AWS_DEFAULT_REGION)
+    sts_client = boto_session.client("sts", config=BOTO_CLIENT_CONFIG)
     try:
         sts_response = sts_client.get_caller_identity()
         account_id = sts_response["Account"]
         account_principal = sts_response["Arn"]
-        print("Analyzing account ID {}".format(account_id))
     except:
         print("No or invalid AWS credentials configured")
         sys.exit(1)
 
+    print("Analyzing account ID {}".format(account_id))
+
     # Get regions enabled in the account
-    ec2_client = boto_session.client("ec2", config=BOTO_CONFIG, region_name=AWS_DEFAULT_REGION)
+    ec2_client = boto_session.client("ec2", config=BOTO_CLIENT_CONFIG)
     ec2_response = ec2_client.describe_regions(AllRegions=False)
     enabled_regions = sorted([region["RegionName"] for region in ec2_response["Regions"]])
 
@@ -310,26 +295,23 @@ if __name__ == "__main__":
     }
 
     # Collect CloudTrail data from all enabled regions
-    with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
-        futures = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
         future_to_region_mapping = {}
         for region in enabled_regions:
             future = executor.submit(
                 get_cloudtrail_entries_from_region,
-                boto_session,
                 region,
                 from_timestamp,
                 run_timestamp,
             )
-            futures.append(future)
             future_to_region_mapping[future] = region
 
-        for future in concurrent.futures.as_completed(futures):
+        for future in concurrent.futures.as_completed(future_to_region_mapping.keys()):
+            region = future_to_region_mapping[future]
             try:
-                add_cloudtrail_entries_to_result_collection(future.result(), result_collection)
+                add_cloudtrail_entries_to_result_collection(region, future.result())
             except Exception as ex:
                 error_message = ex.response["Error"]["Code"]
-                region = future_to_region_mapping[future]
                 print("Failed reading data from region {}: {}".format(region, error_message))
                 result_collection["_metadata"]["regions_failed"][region] = error_message
 

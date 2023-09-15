@@ -29,8 +29,6 @@ All arguments are optional:
                      default: 336 (=14 days), minimum: 1, maximum: 2160 (=90 days)
 --plot-results       generate PNG files that visualize the JSON output file
 --profile PROFILE    named AWS profile to use when running the command
---threads THREADS    number of threads to use (one thread analyzes one region)
-                     default: 8, minimum: 1, maximum: 32
 ```
 
 
