@@ -274,7 +274,7 @@ if __name__ == "__main__":
     # Get regions enabled in the account
     ec2_client = boto_session.client("ec2", config=BOTO_CLIENT_CONFIG)
     ec2_response = ec2_client.describe_regions(AllRegions=False)
-    enabled_regions = sorted([region["RegionName"] for region in ec2_response["Regions"]])
+    enabled_regions = [region["RegionName"] for region in ec2_response["Regions"]]
 
     # Prepare result collection structure
     run_timestamp = datetime.datetime.utcnow()
@@ -289,7 +289,7 @@ if __name__ == "__main__":
                 "from_timestamp": from_timestamp_str,
                 "to_timestamp": run_timestamp_str,
             },
-            "regions_enabled": enabled_regions,
+            "regions_enabled": sorted(enabled_regions),
             "regions_failed": {},
             "run_timestamp": run_timestamp_str,
         },
