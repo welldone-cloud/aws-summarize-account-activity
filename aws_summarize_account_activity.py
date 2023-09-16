@@ -41,7 +41,10 @@ def get_cloudtrail_entries_from_region(region, from_timestamp, to_timestamp):
     for response_page in cloudtrail_paginator.paginate(StartTime=from_timestamp, EndTime=to_timestamp):
         for event in response_page["Events"]:
             if number_of_cloudtrail_entries_processed % SHOW_STATUS_MESSAGE_AFTER_NUMBER_OF_CLOUDTRAIL_ENTRIES == 0:
-                print("Reading data from region {}".format(region))
+                msg = "Reading CloudTrail events from region {}".format(region)
+                if number_of_cloudtrail_entries_processed > 0:
+                    msg += " (collected: {})".format(number_of_cloudtrail_entries_processed)
+                print(msg)
 
             event_detail = json.loads(event["CloudTrailEvent"])
 
@@ -312,7 +315,7 @@ if __name__ == "__main__":
                 add_cloudtrail_entries_to_result_collection(region, future.result())
             except Exception as ex:
                 error_message = ex.response["Error"]["Code"]
-                print("Failed reading data from region {}: {}".format(region, error_message))
+                print("Failed reading CloudTrail events from region {}: {}".format(region, error_message))
                 result_collection["_metadata"]["regions_failed"][region] = error_message
 
     # Write result file
