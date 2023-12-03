@@ -4,7 +4,7 @@ import os
 import re
 import sys
 
-from aws_summarize_account_activity import generate_plot_files
+from modules.cloudtrail_plotter import generate_plot_files
 
 
 EXPECTED_FILE_FORMAT_REGEX = "account_activity_(\\d+)_(\\d+).json"

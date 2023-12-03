@@ -25,10 +25,15 @@ python aws_summarize_account_activity.py
 All arguments are optional:
 
 ```
---past-hours HOURS   hours of CloudTrail data to look back and analyze
-                     default: 336 (=14 days), minimum: 1, maximum: 2160 (=90 days)
---plot-results       generate PNG files that visualize the JSON output file
---profile PROFILE    named AWS profile to use when running the command
+--past-hours HOURS
+    hours of CloudTrail data to look back and analyze
+    default: 336 (=14 days), minimum: 1, maximum: 2160 (=90 days)
+--plot-results
+    generate PNG files that visualize the JSON output file
+--profile PROFILE
+    named AWS profile to use when running the command
+--skip-unsuccessful-api-calls
+    do not analyze CloudTrail API call activity that AWS declined with an error message
 ```
 
 
@@ -38,7 +43,7 @@ All arguments are optional:
 
   https://docs.aws.amazon.com/awscloudtrail/latest/APIReference/API_LookupEvents.html
 
-  This approach has the advantage that it does not require any specific configuration to be present in the target account. There is no need for CloudTrail to be actively enabled or configured in a certain way (e.g., logging to S3 or CloudWatch). Instead, the script analyzes the CloudTrail event history that is available by default and covers the past 90 days.
+  This approach has the advantage that it does not require any specific configuration to be present in the target account. There is no need for CloudTrail to be enabled or configured in a certain way (e.g., logging to S3 or CloudWatch). Instead, the script analyzes the CloudTrail event history that is available by default and covers the past 90 days.
   
 * Using the `LookupEvents` action comes with the drawback that AWS throttles the API to two requests per second. The script will thus need proportionally more time for AWS accounts with lots of AWS API call activity. If the script takes too long for your use case, consider reducing the timeframe of data analyzed via the `--past-hours` argument. Alternatively, if you are in the position to make changes to the AWS account, analyze large amounts of CloudTrail data using AWS Athena or CloudTrail Lake:
 
@@ -46,9 +51,9 @@ All arguments are optional:
   
   https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-lake.html
 
-* The script analyzes management events that were logged to CloudTrail. Please note that there are some AWS API actions that do not get logged: CloudTrail logging support varies from service to service. Similarly, the script analyzes all regions that are currently enabled in the target account. If a region was used in the past 90 days, but is now disabled, the script cannot access the respective CloudTrail data any more.
+* The script analyzes management events that were logged to CloudTrail. Please note that there are some AWS API actions that do not get logged: CloudTrail logging support varies from service to service. Similarly, the script analyzes all regions that are currently enabled in the target account. If a region was used in the past 90 days, but is now disabled, the script cannot access the respective CloudTrail data.
 
-* The JSON output file does not contain the actual data that IAM principals have exchanged with AWS services (raw API request and response contents). Instead, the output only shows aggregated statistics on account activity.
+* The JSON output file does not contain the actual data that IAM principals have exchanged with AWS services (raw API request and response contents). Instead, the output shows aggregated statistics on account activity.
 
 
 ## Minimum IAM permissions required
@@ -138,7 +143,7 @@ Truncated example JSON output file:
       "sso.amazonaws.com:DescribeRegisteredRegions": 1,
       "sts.amazonaws.com:GetCallerIdentity": 1
     },
-    "arn:aws:sts::123456789012:assumed-role/EC2_role/i-04ba0448788198062": {
+    "arn:aws:sts::123456789012:role/EC2_role": {
       "s3.amazonaws.com:ListBuckets": 2,
       "ssm.amazonaws.com:ListInstanceAssociations": 8,
       "ssm.amazonaws.com:UpdateInstanceInformation": 14
@@ -200,13 +205,10 @@ When using the optional `--plot-results` argument, visualizations of the API cal
 Example distribution of API calls across regions:
 ![](./example_plots/api_calls_per_region.png)
 
-Example distribution of API calls within a specific region:
+Example distribution of API calls within a specific region, e.g., `eu-central-1`:
 ![](./example_plots/region_activity.png)
 
-Example distribution of API calls across principals:
-![](./example_plots/api_calls_per_principal.png)
-
-Example distribution of API calls of a specific principal:
+Example distribution of API calls of a specific principal, e.g., an EKS node IAM role:
 ![](./example_plots/principal_activity.png)
 
 
