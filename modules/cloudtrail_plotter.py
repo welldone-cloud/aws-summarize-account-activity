@@ -3,13 +3,13 @@ import os
 import string
 
 
-PLOT_CANVAS_SIZE = (14, 8)
+_PLOT_CANVAS_SIZE = (14, 8)
 
-PLOT_MAX_ITEMS = 50
+_PLOT_MAX_ITEMS = 50
 
-PLOT_MAX_LENGTH_FILE_STEM = 250
+_PLOT_MAX_LENGTH_FILE_STEM = 250
 
-PLOT_MAX_LENGTH_X_AXIS_LABELS = 85
+_PLOT_MAX_LENGTH_X_AXIS_LABELS = 85
 
 
 def generate_plot_files(data, output_directory):
@@ -28,20 +28,20 @@ def generate_plot_files(data, output_directory):
         total_api_calls_per_principal[principal] = 0
         for api_call in data["api_calls_by_principal"][principal]:
             total_api_calls_per_principal[principal] += data["api_calls_by_principal"][principal][api_call]
-    x_axis, y_axis = _dict_to_sorted_tuples(total_api_calls_per_principal, PLOT_MAX_ITEMS)
-    x_axis = tuple(_truncate_str(val, PLOT_MAX_LENGTH_X_AXIS_LABELS) for val in x_axis)
-    title = "API calls per principal (max. entries: {})".format(PLOT_MAX_ITEMS)
+    x_axis, y_axis = _dict_to_sorted_tuples(total_api_calls_per_principal, _PLOT_MAX_ITEMS)
+    x_axis = tuple(_truncate_str(val, _PLOT_MAX_LENGTH_X_AXIS_LABELS) for val in x_axis)
+    title = "API calls per principal (max. entries: {})".format(_PLOT_MAX_ITEMS)
     output_file = os.path.join(output_directory, "summary_principals.png")
     _write_plot_to_file(x_axis, y_axis, title, output_file)
 
     # Generate principal detail plots
     for principal in data["api_calls_by_principal"]:
         principal_data = data["api_calls_by_principal"][principal]
-        x_axis, y_axis = _dict_to_sorted_tuples(principal_data, PLOT_MAX_ITEMS)
-        x_axis = tuple(_truncate_str(val, PLOT_MAX_LENGTH_X_AXIS_LABELS) for val in x_axis)
-        title = "Top API calls for principal '{}' (max. entries: {})".format(principal, PLOT_MAX_ITEMS)
+        x_axis, y_axis = _dict_to_sorted_tuples(principal_data, _PLOT_MAX_ITEMS)
+        x_axis = tuple(_truncate_str(val, _PLOT_MAX_LENGTH_X_AXIS_LABELS) for val in x_axis)
+        title = "Top API calls for principal '{}' (max. entries: {})".format(principal, _PLOT_MAX_ITEMS)
         file_stem = os.path.abspath(os.path.join(principals_dir, _str_to_filename(principal)))
-        output_file = _truncate_str(file_stem, PLOT_MAX_LENGTH_FILE_STEM) + ".png"
+        output_file = _truncate_str(file_stem, _PLOT_MAX_LENGTH_FILE_STEM) + ".png"
         _write_plot_to_file(x_axis, y_axis, title, output_file)
 
     # Generate region summary plot
@@ -50,20 +50,20 @@ def generate_plot_files(data, output_directory):
         total_api_calls_per_region[region] = 0
         for api_call in data["api_calls_by_region"][region]:
             total_api_calls_per_region[region] += data["api_calls_by_region"][region][api_call]
-    x_axis, y_axis = _dict_to_sorted_tuples(total_api_calls_per_region, PLOT_MAX_ITEMS)
-    x_axis = tuple(_truncate_str(val, PLOT_MAX_LENGTH_X_AXIS_LABELS) for val in x_axis)
-    title = "API calls per region (max. entries: {})".format(PLOT_MAX_ITEMS)
+    x_axis, y_axis = _dict_to_sorted_tuples(total_api_calls_per_region, _PLOT_MAX_ITEMS)
+    x_axis = tuple(_truncate_str(val, _PLOT_MAX_LENGTH_X_AXIS_LABELS) for val in x_axis)
+    title = "API calls per region (max. entries: {})".format(_PLOT_MAX_ITEMS)
     output_file = os.path.join(output_directory, "summary_regions.png")
     _write_plot_to_file(x_axis, y_axis, title, output_file)
 
     # Generate region detail plots
     for region in data["api_calls_by_region"]:
         region_data = data["api_calls_by_region"][region]
-        x_axis, y_axis = _dict_to_sorted_tuples(region_data, PLOT_MAX_ITEMS)
-        x_axis = tuple(_truncate_str(val, PLOT_MAX_LENGTH_X_AXIS_LABELS) for val in x_axis)
-        title = "Top API calls for region '{}' (max. entries: {})".format(region, PLOT_MAX_ITEMS)
+        x_axis, y_axis = _dict_to_sorted_tuples(region_data, _PLOT_MAX_ITEMS)
+        x_axis = tuple(_truncate_str(val, _PLOT_MAX_LENGTH_X_AXIS_LABELS) for val in x_axis)
+        title = "Top API calls for region '{}' (max. entries: {})".format(region, _PLOT_MAX_ITEMS)
         file_stem = os.path.abspath(os.path.join(regions_dir, _str_to_filename(region)))
-        output_file = _truncate_str(file_stem, PLOT_MAX_LENGTH_FILE_STEM) + ".png"
+        output_file = _truncate_str(file_stem, _PLOT_MAX_LENGTH_FILE_STEM) + ".png"
         _write_plot_to_file(x_axis, y_axis, title, output_file)
 
 
@@ -108,7 +108,7 @@ def _write_plot_to_file(x_axis, y_axis, title, file_name):
     """
     Writes a bar chart PNG file with given x_axis, y_axis and title data to the given file name.
     """
-    plt.figure(figsize=PLOT_CANVAS_SIZE)
+    plt.figure(figsize=_PLOT_CANVAS_SIZE)
     plt.title(title, wrap=True)
     plt.gca().yaxis.get_major_locator().set_params(integer=True)
     plt.xticks(rotation=90)
