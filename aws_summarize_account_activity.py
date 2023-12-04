@@ -129,7 +129,7 @@ if __name__ == "__main__":
         required=False,
         default=False,
         action="store_true",
-        help="do not analyze CloudTrail API call activity that AWS declined with an error message",
+        help="do not include API call activity that AWS declined with an error message",
     )
     args = parser.parse_args()
     past_hours = args.past_hours[0]
