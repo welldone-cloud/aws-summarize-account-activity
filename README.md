@@ -33,7 +33,7 @@ All arguments are optional:
 --profile PROFILE
     named AWS profile to use when running the command
 --skip-unsuccessful-api-calls
-    do not include API call activity that AWS declined with an error message
+    do not analyze CloudTrail logs of API calls that were declined with an error message
 ```
 
 
