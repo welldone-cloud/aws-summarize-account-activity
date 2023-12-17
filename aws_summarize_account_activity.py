@@ -4,6 +4,7 @@ import botocore.config
 import concurrent.futures
 import datetime
 import json
+import os
 import sys
 
 from modules import cloudtrail_parser
@@ -156,7 +157,7 @@ if __name__ == "__main__":
     ec2_response = ec2_client.describe_regions(AllRegions=False)
     enabled_regions = sorted([region["RegionName"] for region in ec2_response["Regions"]])
 
-    # Prepare result collection structure
+    # Prepare result collection JSON structure
     run_timestamp = datetime.datetime.utcnow()
     run_timestamp_str = run_timestamp.strftime(TIMESTAMP_FORMAT)
     from_timestamp = run_timestamp - datetime.timedelta(hours=past_hours)
@@ -176,6 +177,13 @@ if __name__ == "__main__":
         "api_calls_by_principal": {},
         "api_calls_by_region": {},
     }
+
+    # Prepare results directory
+    results_directory = os.path.join(os.path.relpath(os.path.dirname(__file__)), "results")
+    try:
+        os.mkdir(results_directory)
+    except FileExistsError:
+        pass
 
     # Collect CloudTrail data from all enabled regions
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -199,14 +207,16 @@ if __name__ == "__main__":
                 result_collection["_metadata"]["regions_failed"][region] = error_message
 
     # Write JSON result file
-    output_file_name = "account_activity_{}_{}.json".format(account_id, run_timestamp_str)
-    with open(output_file_name, "w") as out_file:
+    result_file = os.path.join(results_directory, "account_activity_{}_{}.json".format(account_id, run_timestamp_str))
+    with open(result_file, "w") as out_file:
         json.dump(result_collection, out_file, indent=2, sort_keys=True)
-    print("Output file written to {}".format(output_file_name))
+    print("Output file written to {}".format(result_file))
 
     # Write plot files, if configured
     if plot_results:
         print("Generating plots")
-        output_directory_name = "account_activity_{}_{}_plots".format(account_id, run_timestamp_str)
-        cloudtrail_plotter.generate_plot_files(result_collection, output_directory_name)
-        print("Plot files written to {}".format(output_directory_name))
+        plots_directory = os.path.join(
+            results_directory, "account_activity_{}_{}_plots".format(account_id, run_timestamp_str)
+        )
+        cloudtrail_plotter.generate_plot_files(result_collection, plots_directory)
+        print("Plot files written to {}".format(plots_directory))
