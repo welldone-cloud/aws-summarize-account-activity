@@ -8,7 +8,7 @@ Analyzes CloudTrail data of a given AWS account and generates a summary of recen
 
 Make sure you have AWS credentials configured for your target account. This can either be done using [environment 
 variables](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html) or by specifying a [named 
-profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html) in the optional `--profile` 
+profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html) in the optional `--profile` 
 argument. The minimum required IAM permissions are listed below. 
 
 Example run:
