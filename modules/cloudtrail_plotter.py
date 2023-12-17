@@ -7,8 +7,6 @@ _PLOT_CANVAS_SIZE = (14, 8)
 
 _PLOT_MAX_ITEMS = 50
 
-_PLOT_MAX_LENGTH_FILE_STEM = 250
-
 _PLOT_MAX_LENGTH_X_AXIS_LABELS = 85
 
 
@@ -40,8 +38,7 @@ def generate_plot_files(data, output_directory):
         x_axis, y_axis = _dict_to_sorted_tuples(principal_data, _PLOT_MAX_ITEMS)
         x_axis = tuple(_truncate_str(val, _PLOT_MAX_LENGTH_X_AXIS_LABELS) for val in x_axis)
         title = "Top API calls for principal '{}' (max. entries: {})".format(principal, _PLOT_MAX_ITEMS)
-        file_stem = os.path.abspath(os.path.join(principals_dir, _str_to_filename(principal)))
-        output_file = _truncate_str(file_stem, _PLOT_MAX_LENGTH_FILE_STEM) + ".png"
+        output_file = os.path.join(principals_dir, _str_to_filename(principal) + ".png")
         _write_plot_to_file(x_axis, y_axis, title, output_file)
 
     # Generate region summary plot
@@ -62,8 +59,7 @@ def generate_plot_files(data, output_directory):
         x_axis, y_axis = _dict_to_sorted_tuples(region_data, _PLOT_MAX_ITEMS)
         x_axis = tuple(_truncate_str(val, _PLOT_MAX_LENGTH_X_AXIS_LABELS) for val in x_axis)
         title = "Top API calls for region '{}' (max. entries: {})".format(region, _PLOT_MAX_ITEMS)
-        file_stem = os.path.abspath(os.path.join(regions_dir, _str_to_filename(region)))
-        output_file = _truncate_str(file_stem, _PLOT_MAX_LENGTH_FILE_STEM) + ".png"
+        output_file = os.path.join(regions_dir, _str_to_filename(region) + ".png")
         _write_plot_to_file(x_axis, y_axis, title, output_file)
 
 
