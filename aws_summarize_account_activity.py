@@ -36,7 +36,9 @@ def get_cloudtrail_entries_for_region(region, from_timestamp, to_timestamp):
             if number_of_cloudtrail_entries_processed % SHOW_STATUS_MESSAGE_AFTER_NUMBER_OF_CLOUDTRAIL_ENTRIES == 0:
                 msg = "Reading CloudTrail records from region {}".format(region)
                 if number_of_cloudtrail_entries_processed > 0:
-                    msg += " (collected: {})".format(number_of_cloudtrail_entries_processed)
+                    msg += " (count: {}, currently at: {})".format(
+                        number_of_cloudtrail_entries_processed, entry["EventTime"].astimezone(datetime.timezone.utc)
+                    )
                 print(msg)
             number_of_cloudtrail_entries_processed += 1
 
