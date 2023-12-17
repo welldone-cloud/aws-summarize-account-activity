@@ -4,7 +4,7 @@ import os
 import re
 import sys
 
-from modules.cloudtrail_plotter import generate_plot_files
+from modules import cloudtrail_plotter
 
 
 EXPECTED_FILE_FORMAT_REGEX = "account_activity_(\\d+)_(\\d+).json"
@@ -44,8 +44,15 @@ if __name__ == "__main__":
         print("Invalid JSON content")
         sys.exit(1)
 
+    # Prepare results directory
+    results_directory = os.path.join(os.path.relpath(os.path.dirname(__file__)), "results")
+    try:
+        os.mkdir(results_directory)
+    except FileExistsError:
+        pass
+
     # Write plot files
     print("Generating plots")
-    output_dir_name = "account_activity_{}_{}_plots".format(account_id, run_timestamp)
-    generate_plot_files(result_collection, output_dir_name)
-    print("Plot files written to {}".format(output_dir_name))
+    plots_directory = os.path.join(results_directory, "account_activity_{}_{}_plots".format(account_id, run_timestamp))
+    cloudtrail_plotter.generate_plot_files(result_collection, plots_directory)
+    print("Plot files written to {}".format(plots_directory))
