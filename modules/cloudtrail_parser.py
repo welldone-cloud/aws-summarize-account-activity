@@ -86,6 +86,29 @@ def _get_principal_for_user_identity_type_assumedrole(user_identity):
             "accountId": "112233445566",
             "accessKeyId": "ASIA2XDS1PBSLKBFKGOW"
         }
+
+        "userIdentity": {
+            "type": "AssumedRole",
+            "principalId": "112233445566:aws:ec2-instance:i-0784406a8a14355fe",
+            "arn": "arn:aws:sts::112233445566:assumed-role/aws:ec2-instance/i-0784406a8a14355fe",
+            "accountId": "112233445566",
+            "accessKeyId": "ASIA2KRS2PBAF3VD1735",
+            "sessionContext": {
+                "sessionIssuer": {
+                    "type": "Role",
+                    "principalId": "112233445566:aws:ec2-instance",
+                    "arn": "arn:aws:iam::112233445566:role/aws:ec2-instance",
+                    "accountId": "112233445566",
+                    "userName": "aws:ec2-instance"
+                },
+                "webIdFederationData": {},
+                "attributes": {
+                    "creationDate": "2023-12-17T16:41:42Z",
+                    "mfaAuthenticated": "false"
+                },
+                "ec2RoleDelivery": "2.0"
+            }
+        }
     """
     try:
         arn = user_identity["sessionContext"]["sessionIssuer"]["arn"]
