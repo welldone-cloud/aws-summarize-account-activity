@@ -44,18 +44,20 @@ if __name__ == "__main__":
         print("Error: Invalid JSON content")
         sys.exit(1)
 
-    # Prepare results directory
+    # Prepare results directories
     results_directory = os.path.join(os.path.relpath(os.path.dirname(__file__)), "results")
     try:
         os.mkdir(results_directory)
     except FileExistsError:
         pass
-
-    # Write plot files
     plots_directory = os.path.join(results_directory, "account_activity_{}_{}_plots".format(account_id, run_timestamp))
-    if os.path.exists(plots_directory):
+    try:
+        os.mkdir(plots_directory)
+    except FileExistsError:
         print("Error: Destination already exists: {}".format(plots_directory))
         sys.exit(1)
+
+    # Write plot files
     print("Generating plots")
     cloudtrail_plotter.generate_plot_files(result_collection, plots_directory)
     print("Plot files written to {}".format(plots_directory))

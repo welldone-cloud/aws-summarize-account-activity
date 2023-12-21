@@ -17,51 +17,59 @@ BOTO_CLIENT_CONFIG = botocore.config.Config(retries={"total_max_attempts": 5, "m
 
 TIMESTAMP_FORMAT = "%Y%m%d%H%M%S"
 
-SHOW_STATUS_MESSAGE_AFTER_NUMBER_OF_CLOUDTRAIL_ENTRIES = 1000
+SHOW_STATUS_MESSAGE_AFTER_NUMBER_OF_CLOUDTRAIL_LOG_RECORDS = 1000
 
 
-def get_cloudtrail_entries_for_region(region, from_timestamp, to_timestamp):
+def get_cloudtrail_activity_for_region(region, from_timestamp, to_timestamp):
     """
     Returns a nested dict describing the activity recorded in CloudTrail, for the given region and timeframe:
-    dict[principal][api_call] = count
+      dict[principal][api_call] = count
+    If configured, dumps a copy of the raw CloudTrail data analyzed.
     """
-    cloudtrail_entries = {}
+    cloudtrail_activity = {}
     boto_session = boto3.session.Session(profile_name=profile, region_name=region)
     cloudtrail_client = boto_session.client("cloudtrail", config=BOTO_CLIENT_CONFIG)
+    if dump_raw_cloudtrail_data:
+        dump_file = open(os.path.join(raw_cloudtrail_data_directory, "{}.jsonl".format(region)), "w")
 
+    # Iterate through CloudTrail logs
     cloudtrail_paginator = cloudtrail_client.get_paginator("lookup_events")
-    number_of_cloudtrail_entries_processed = 0
+    number_of_log_records_processed = 0
     for response_page in cloudtrail_paginator.paginate(StartTime=from_timestamp, EndTime=to_timestamp):
         for entry in response_page["Events"]:
-            if number_of_cloudtrail_entries_processed % SHOW_STATUS_MESSAGE_AFTER_NUMBER_OF_CLOUDTRAIL_ENTRIES == 0:
+            # Show regular status messages
+            if number_of_log_records_processed % SHOW_STATUS_MESSAGE_AFTER_NUMBER_OF_CLOUDTRAIL_LOG_RECORDS == 0:
                 msg = "Reading CloudTrail records from region {}".format(region)
-                if number_of_cloudtrail_entries_processed > 0:
+                if number_of_log_records_processed > 0:
                     msg += " (count: {}, currently at: {})".format(
-                        number_of_cloudtrail_entries_processed, entry["EventTime"].astimezone(datetime.timezone.utc)
+                        number_of_log_records_processed, entry["EventTime"].astimezone(datetime.timezone.utc)
                     )
                 print(msg)
-            number_of_cloudtrail_entries_processed += 1
+            number_of_log_records_processed += 1
 
+            # Analyze current CloudTrail log record
             log_record = json.loads(entry["CloudTrailEvent"])
             if skip_unsuccessful_api_calls and not cloudtrail_parser.is_successful_api_call(log_record):
                 continue
             principal = cloudtrail_parser.get_principal_from_log_record(log_record)
             api_call = cloudtrail_parser.get_api_call_from_log_record(log_record)
-
-            # Add to result structure
             try:
-                cloudtrail_entries[principal][api_call] += 1
+                cloudtrail_activity[principal][api_call] += 1
             except KeyError:
-                if principal not in cloudtrail_entries:
-                    cloudtrail_entries[principal] = {}
-                if api_call not in cloudtrail_entries[principal]:
-                    cloudtrail_entries[principal][api_call] = 1
+                if principal not in cloudtrail_activity:
+                    cloudtrail_activity[principal] = {}
+                if api_call not in cloudtrail_activity[principal]:
+                    cloudtrail_activity[principal][api_call] = 1
+            if dump_raw_cloudtrail_data:
+                dump_file.write("{}\n".format(json.dumps(log_record, separators=(",", ":"))))
 
     print("Finished region {}".format(region))
-    return cloudtrail_entries
+    if dump_raw_cloudtrail_data:
+        dump_file.close()
+    return cloudtrail_activity
 
 
-def add_cloudtrail_entries_to_result_collection(region, regional_cloudtrail_activity):
+def add_cloudtrail_activity_to_result_collection(region, regional_cloudtrail_activity):
     """
     Adds the given regional activity recorded in CloudTrail to the overall result collection.
     """
@@ -107,6 +115,13 @@ if __name__ == "__main__":
     # Parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--dump-raw-cloudtrail-data",
+        required=False,
+        default=False,
+        action="store_true",
+        help="store a copy of the analyzed CloudTrail data in JSONL format",
+    )
+    parser.add_argument(
         "--past-hours",
         required=False,
         nargs=1,
@@ -132,9 +147,10 @@ if __name__ == "__main__":
         required=False,
         default=False,
         action="store_true",
-        help="do not analyze CloudTrail logs of API calls that were declined with an error message",
+        help="do not process CloudTrail logs of API calls that were declined with an error message",
     )
     args = parser.parse_args()
+    dump_raw_cloudtrail_data = args.dump_raw_cloudtrail_data
     past_hours = args.past_hours[0]
     plot_results = args.plot_results
     profile = args.profile[0] if args.profile else None
@@ -172,6 +188,7 @@ if __name__ == "__main__":
                 "from_timestamp": from_timestamp_str,
                 "to_timestamp": run_timestamp_str,
             },
+            "invocation": " ".join(sys.argv),
             "regions_enabled": enabled_regions,
             "regions_failed": {},
             "run_timestamp": run_timestamp_str,
@@ -180,19 +197,29 @@ if __name__ == "__main__":
         "api_calls_by_region": {},
     }
 
-    # Prepare results directory
+    # Prepare results directories
     results_directory = os.path.join(os.path.relpath(os.path.dirname(__file__)), "results")
     try:
         os.mkdir(results_directory)
     except FileExistsError:
         pass
+    if dump_raw_cloudtrail_data:
+        raw_cloudtrail_data_directory = os.path.join(
+            results_directory, "account_activity_{}_{}_raw_cloudtrail_data".format(account_id, run_timestamp_str)
+        )
+        os.mkdir(raw_cloudtrail_data_directory)
+    if plot_results:
+        plots_directory = os.path.join(
+            results_directory, "account_activity_{}_{}_plots".format(account_id, run_timestamp_str)
+        )
+        os.mkdir(plots_directory)
 
     # Collect CloudTrail data from all enabled regions
     with concurrent.futures.ThreadPoolExecutor() as executor:
         future_to_region_mapping = {}
         for region in enabled_regions:
             future = executor.submit(
-                get_cloudtrail_entries_for_region,
+                get_cloudtrail_activity_for_region,
                 region,
                 from_timestamp,
                 run_timestamp,
@@ -202,23 +229,20 @@ if __name__ == "__main__":
         for future in concurrent.futures.as_completed(future_to_region_mapping.keys()):
             region = future_to_region_mapping[future]
             try:
-                add_cloudtrail_entries_to_result_collection(region, future.result())
+                add_cloudtrail_activity_to_result_collection(region, future.result())
             except Exception as ex:
                 error_message = ex.response["Error"]["Code"]
                 print("Failed reading CloudTrail events from region {}: {}".format(region, error_message))
                 result_collection["_metadata"]["regions_failed"][region] = error_message
 
-    # Write JSON result file
+    # Write results and show result locations
     result_file = os.path.join(results_directory, "account_activity_{}_{}.json".format(account_id, run_timestamp_str))
     with open(result_file, "w") as out_file:
         json.dump(result_collection, out_file, indent=2, sort_keys=True)
     print("Output file written to {}".format(result_file))
-
-    # Write plot files, if configured
+    if dump_raw_cloudtrail_data:
+        print("Raw CloudTrail data written to {}".format(raw_cloudtrail_data_directory))
     if plot_results:
         print("Generating plots")
-        plots_directory = os.path.join(
-            results_directory, "account_activity_{}_{}_plots".format(account_id, run_timestamp_str)
-        )
         cloudtrail_plotter.generate_plot_files(result_collection, plots_directory)
         print("Plot files written to {}".format(plots_directory))

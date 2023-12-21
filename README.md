@@ -25,6 +25,8 @@ python aws_summarize_account_activity.py
 All arguments are optional:
 
 ```
+--dump-raw-cloudtrail-data
+    store a copy of the analyzed CloudTrail data in JSONL format
 --past-hours HOURS
     hours of CloudTrail data to look back and analyze
     default: 336 (=14 days), minimum: 1, maximum: 2160 (=90 days)
@@ -33,7 +35,7 @@ All arguments are optional:
 --profile PROFILE
     named AWS profile to use when running the command
 --skip-unsuccessful-api-calls
-    do not analyze CloudTrail logs of API calls that were declined with an error message
+    do not process CloudTrail logs of API calls that were declined with an error message
 ```
 
 

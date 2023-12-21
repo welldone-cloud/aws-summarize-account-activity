@@ -14,7 +14,6 @@ def generate_plot_files(data, output_directory):
     """
     Generates plots that represent the given CloudTrail data and writes them to the given directory as PNG files.
     """
-    os.mkdir(output_directory)
     principals_dir = os.path.join(output_directory, "principals")
     os.mkdir(principals_dir)
     regions_dir = os.path.join(output_directory, "regions")
