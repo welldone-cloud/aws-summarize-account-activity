@@ -89,6 +89,7 @@ Truncated example JSON output file:
       "from_timestamp": "20230315135630",
       "to_timestamp": "20230329135630"
     },
+    "invocation": "aws_summarize_account_activity.py --plot-results",
     "regions_enabled": [
       "af-south-1",
       "ap-northeast-1",
