@@ -35,13 +35,13 @@ if __name__ == "__main__":
         account_id = captures.group(1)
         run_timestamp = captures.group(2)
     else:
-        print("Unexpected file name received: {}".format(file_name_without_path))
+        print("Error: Unexpected file name received: {}".format(file_name_without_path))
         print("Expected pattern: {}".format(EXPECTED_FILE_FORMAT_REGEX))
         sys.exit(1)
     try:
         result_collection = json.load(file_name)
     except json.decoder.JSONDecodeError:
-        print("Invalid JSON content")
+        print("Error: Invalid JSON content")
         sys.exit(1)
 
     # Prepare results directory
@@ -52,7 +52,10 @@ if __name__ == "__main__":
         pass
 
     # Write plot files
-    print("Generating plots")
     plots_directory = os.path.join(results_directory, "account_activity_{}_{}_plots".format(account_id, run_timestamp))
+    if os.path.exists(plots_directory):
+        print("Error: Destination already exists: {}".format(plots_directory))
+        sys.exit(1)
+    print("Generating plots")
     cloudtrail_plotter.generate_plot_files(result_collection, plots_directory)
     print("Plot files written to {}".format(plots_directory))
