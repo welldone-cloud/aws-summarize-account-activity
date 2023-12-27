@@ -25,8 +25,11 @@ python aws_summarize_account_activity.py
 All arguments are optional:
 
 ```
+--activity-type {ALL,SUCCESSFUL,FAILED}
+    type of CloudTrail activity to summarize: all API calls (default), 
+    only successful API calls, or only API calls that AWS declined with an error message
 --dump-raw-cloudtrail-data
-    store a copy of the analyzed CloudTrail data in JSONL format
+    store a copy of the gathered CloudTrail data in JSONL format
 --past-hours HOURS
     hours of CloudTrail data to look back and analyze
     default: 336 (=14 days), minimum: 1, maximum: 2160 (=90 days)
@@ -34,28 +37,24 @@ All arguments are optional:
     generate PNG files that visualize the JSON output file
 --profile PROFILE
     named AWS profile to use when running the command
---skip-unsuccessful-api-calls
-    do not process CloudTrail logs of API calls that were declined with an error message
 ```
 
 
 ## Notes
 
-* The script uses the `LookupEvents` action of the CloudTrail API to extract information on account activity:
+* The script uses the `LookupEvents` API of CloudTrail to gather information on account activity:
 
   https://docs.aws.amazon.com/awscloudtrail/latest/APIReference/API_LookupEvents.html
 
   This approach has the advantage that it does not require any specific configuration to be present in the target account. There is no need for CloudTrail to be enabled or configured in a certain way (e.g., logging to S3 or CloudWatch). Instead, the script analyzes the CloudTrail event history that is available by default and covers the past 90 days.
   
-* Using the `LookupEvents` action comes with the drawback that AWS throttles the API to two requests per second. The script will thus need proportionally more time for AWS accounts with lots of AWS API call activity. If the script takes too long for your use case, consider reducing the timeframe of data analyzed via the `--past-hours` argument. Alternatively, if you are in the position to make changes to the AWS account, analyze large amounts of CloudTrail data using AWS Athena or CloudTrail Lake:
+* Using the `LookupEvents` API comes with the drawback that it is throttled to two requests per second. The script will thus need proportionally more time for AWS accounts with lots of AWS API call activity. If the script takes too long for your use case, consider reducing the timeframe of data analyzed via the `--past-hours` argument. Alternatively, if you are in the position to make changes to the AWS account, analyze large amounts of CloudTrail data using AWS Athena or CloudTrail Lake:
 
   https://docs.aws.amazon.com/athena/latest/ug/cloudtrail-logs.html
   
   https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-lake.html
 
 * The script analyzes management events that were logged to CloudTrail. Please note that there are some AWS API actions that do not get logged: CloudTrail logging support varies from service to service. Similarly, the script analyzes all regions that are currently enabled in the target account. If a region was used in the past 90 days, but is now disabled, the script cannot access the respective CloudTrail data.
-
-* The JSON output file does not contain the actual data that IAM principals have exchanged with AWS services (raw API request and response contents). Instead, the output shows aggregated statistics on account activity.
 
 
 ## Minimum IAM permissions required
@@ -85,6 +84,7 @@ Truncated example JSON output file:
   "_metadata": {
     "account_id": "123456789012",
     "account_principal": "arn:aws:iam::123456789012:user/myuser",
+    "activity_type": "ALL",
     "cloudtrail_data_analyzed": {
       "from_timestamp": "20230315135630",
       "to_timestamp": "20230329135630"
@@ -203,7 +203,7 @@ Truncated example JSON output file:
 
 ## Example visualizations
 
-When using the optional `--plot-results` argument, visualizations of the API call activity are generated as PNG files. 
+When using the optional `--plot-results` argument, visualizations of the API call activity are generated as PNG files: 
 
 Example distribution of API calls across regions:
 ![](./example_plots/api_calls_per_region.png)

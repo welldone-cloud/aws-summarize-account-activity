@@ -20,9 +20,9 @@ TIMESTAMP_FORMAT = "%Y%m%d%H%M%S"
 SHOW_STATUS_MESSAGE_AFTER_NUMBER_OF_CLOUDTRAIL_LOG_RECORDS = 1000
 
 
-def get_cloudtrail_activity_for_region(region, from_timestamp, to_timestamp):
+def get_cloudtrail_activity_for_region(region):
     """
-    Returns a nested dict describing the activity recorded in CloudTrail, for the given region and timeframe:
+    Returns a nested dict describing the configured activity recorded in CloudTrail, for the given region:
       dict[principal][api_call] = count
     If configured, dumps a copy of the raw CloudTrail data analyzed.
     """
@@ -34,23 +34,34 @@ def get_cloudtrail_activity_for_region(region, from_timestamp, to_timestamp):
 
     # Iterate through CloudTrail logs
     cloudtrail_paginator = cloudtrail_client.get_paginator("lookup_events")
-    number_of_log_records_processed = 0
-    for response_page in cloudtrail_paginator.paginate(StartTime=from_timestamp, EndTime=to_timestamp):
-        for entry in response_page["Events"]:
+    number_of_log_records_processed = -1
+    for response_page in cloudtrail_paginator.paginate(StartTime=from_timestamp, EndTime=run_timestamp):
+        for event in response_page["Events"]:
+            number_of_log_records_processed += 1
+            log_record = json.loads(event["CloudTrailEvent"])
+
             # Show regular status messages
             if number_of_log_records_processed % SHOW_STATUS_MESSAGE_AFTER_NUMBER_OF_CLOUDTRAIL_LOG_RECORDS == 0:
                 msg = "Reading CloudTrail records from region {}".format(region)
                 if number_of_log_records_processed > 0:
                     msg += " (count: {}, currently at: {})".format(
-                        number_of_log_records_processed, entry["EventTime"].astimezone(datetime.timezone.utc)
+                        number_of_log_records_processed, event["EventTime"].astimezone(datetime.timezone.utc)
                     )
                 print(msg)
-            number_of_log_records_processed += 1
 
-            # Analyze current CloudTrail log record
-            log_record = json.loads(entry["CloudTrailEvent"])
-            if skip_unsuccessful_api_calls and not cloudtrail_parser.is_successful_api_call(log_record):
-                continue
+            # Dump log record, if configured
+            if dump_raw_cloudtrail_data:
+                dump_file.write("{}\n".format(json.dumps(log_record, separators=(",", ":"))))
+
+            # Skip certain types of activity, if configured
+            if activity_type != "ALL":
+                is_successful_api_call = cloudtrail_parser.is_successful_api_call(log_record)
+                if (activity_type == "SUCCESSFUL" and not is_successful_api_call) or (
+                    activity_type == "FAILED" and is_successful_api_call
+                ):
+                    continue
+
+            # Capture log record details
             principal = cloudtrail_parser.get_principal_from_log_record(log_record)
             api_call = cloudtrail_parser.get_api_call_from_log_record(log_record)
             try:
@@ -60,8 +71,6 @@ def get_cloudtrail_activity_for_region(region, from_timestamp, to_timestamp):
                     cloudtrail_activity[principal] = {}
                 if api_call not in cloudtrail_activity[principal]:
                     cloudtrail_activity[principal][api_call] = 1
-            if dump_raw_cloudtrail_data:
-                dump_file.write("{}\n".format(json.dumps(log_record, separators=(",", ":"))))
 
     print("Finished region {}".format(region))
     if dump_raw_cloudtrail_data:
@@ -115,11 +124,18 @@ if __name__ == "__main__":
     # Parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--activity-type",
+        required=False,
+        default="ALL",
+        choices=["ALL", "SUCCESSFUL", "FAILED"],
+        help="type of CloudTrail activity to summarize: all API calls (default), only successful API calls, or only API calls that AWS declined with an error message",
+    )
+    parser.add_argument(
         "--dump-raw-cloudtrail-data",
         required=False,
         default=False,
         action="store_true",
-        help="store a copy of the analyzed CloudTrail data in JSONL format",
+        help="store a copy of the gathered CloudTrail data in JSONL format",
     )
     parser.add_argument(
         "--past-hours",
@@ -142,19 +158,12 @@ if __name__ == "__main__":
         nargs=1,
         help="named AWS profile to use when running the command",
     )
-    parser.add_argument(
-        "--skip-unsuccessful-api-calls",
-        required=False,
-        default=False,
-        action="store_true",
-        help="do not process CloudTrail logs of API calls that were declined with an error message",
-    )
     args = parser.parse_args()
+    activity_type = args.activity_type
     dump_raw_cloudtrail_data = args.dump_raw_cloudtrail_data
     past_hours = args.past_hours[0]
     plot_results = args.plot_results
     profile = args.profile[0] if args.profile else None
-    skip_unsuccessful_api_calls = args.skip_unsuccessful_api_calls
 
     boto_session = boto3.session.Session(profile_name=profile, region_name=AWS_DEFAULT_REGION)
 
@@ -184,6 +193,7 @@ if __name__ == "__main__":
         "_metadata": {
             "account_id": account_id,
             "account_principal": account_principal,
+            "activity_type": activity_type,
             "cloudtrail_data_analyzed": {
                 "from_timestamp": from_timestamp_str,
                 "to_timestamp": run_timestamp_str,
@@ -218,12 +228,7 @@ if __name__ == "__main__":
     with concurrent.futures.ThreadPoolExecutor() as executor:
         future_to_region_mapping = {}
         for region in enabled_regions:
-            future = executor.submit(
-                get_cloudtrail_activity_for_region,
-                region,
-                from_timestamp,
-                run_timestamp,
-            )
+            future = executor.submit(get_cloudtrail_activity_for_region, region)
             future_to_region_mapping[future] = region
 
         for future in concurrent.futures.as_completed(future_to_region_mapping.keys()):
@@ -243,6 +248,9 @@ if __name__ == "__main__":
     if dump_raw_cloudtrail_data:
         print("Raw CloudTrail data written to {}".format(raw_cloudtrail_data_directory))
     if plot_results:
-        print("Generating plots")
-        cloudtrail_plotter.generate_plot_files(result_collection, plots_directory)
-        print("Plot files written to {}".format(plots_directory))
+        if not result_collection["api_calls_by_principal"]:
+            print("No API call activity to plot")
+        else:
+            print("Generating plots")
+            cloudtrail_plotter.generate_plot_files(result_collection, plots_directory)
+            print("Plot files written to {}".format(plots_directory))

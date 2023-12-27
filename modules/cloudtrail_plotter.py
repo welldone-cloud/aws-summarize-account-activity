@@ -36,7 +36,7 @@ def generate_plot_files(data, output_directory):
         principal_data = data["api_calls_by_principal"][principal]
         x_axis, y_axis = _dict_to_sorted_tuples(principal_data, _PLOT_MAX_ITEMS)
         x_axis = tuple(_truncate_str(val, _PLOT_MAX_LENGTH_X_AXIS_LABELS) for val in x_axis)
-        title = "Top API calls for principal '{}' (max. entries: {})".format(principal, _PLOT_MAX_ITEMS)
+        title = "API calls for principal '{}' (max. entries: {})".format(principal, _PLOT_MAX_ITEMS)
         output_file = os.path.join(principals_dir, _str_to_filename(principal) + ".png")
         _write_plot_to_file(x_axis, y_axis, title, output_file)
 
@@ -57,7 +57,7 @@ def generate_plot_files(data, output_directory):
         region_data = data["api_calls_by_region"][region]
         x_axis, y_axis = _dict_to_sorted_tuples(region_data, _PLOT_MAX_ITEMS)
         x_axis = tuple(_truncate_str(val, _PLOT_MAX_LENGTH_X_AXIS_LABELS) for val in x_axis)
-        title = "Top API calls for region '{}' (max. entries: {})".format(region, _PLOT_MAX_ITEMS)
+        title = "API calls for region '{}' (max. entries: {})".format(region, _PLOT_MAX_ITEMS)
         output_file = os.path.join(regions_dir, _str_to_filename(region) + ".png")
         _write_plot_to_file(x_axis, y_axis, title, output_file)
 

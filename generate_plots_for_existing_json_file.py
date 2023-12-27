@@ -58,6 +58,9 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Write plot files
-    print("Generating plots")
-    cloudtrail_plotter.generate_plot_files(result_collection, plots_directory)
-    print("Plot files written to {}".format(plots_directory))
+    if not result_collection["api_calls_by_principal"]:
+        print("No API call activity to plot")
+    else:
+        print("Generating plots")
+        cloudtrail_plotter.generate_plot_files(result_collection, plots_directory)
+        print("Plot files written to {}".format(plots_directory))
