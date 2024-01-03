@@ -276,7 +276,7 @@ def _get_principal_for_user_identity_type_samluser(user_identity):
     return "saml:{}".format(user_identity["principalId"])
 
 
-def _get_principal_for_user_identity_type_unknown_or_directory(user_identity):
+def _get_principal_for_user_identity_type_unknown(user_identity):
     """
     Examples:
         "userIdentity": {
@@ -368,6 +368,24 @@ def _get_principal_for_user_identity_type_unknown_or_directory(user_identity):
             return user_identity["type"]
 
 
+def _get_principal_for_user_identity_type_directory(user_identity):
+    """
+    Examples:
+        "userIdentity": {
+            "type": "Directory",
+            "arn": "arn:aws:ds:us-east-1:112233445566:user/d-0000cafe00/00000000-0000-0000-0000-000000000000",
+            "accountId": "112233445566",
+            "userName": "user@example.com"
+        }
+    """
+    split_arn = user_identity["arn"].split("/")
+    return "{}:ds/{}/{}".format(
+        user_identity["accountId"],
+        split_arn[-2],
+        split_arn[-1],
+    )
+
+
 _PRINCIPAL_EXTRACTION_FUNCTIONS = {
     "None": _get_principal_for_user_identity_type_none,
     "IAMUser": _get_principal_for_user_identity_type_iamuser,
@@ -379,8 +397,8 @@ _PRINCIPAL_EXTRACTION_FUNCTIONS = {
     "IdentityCenterUser": _get_principal_for_user_identity_type_identitycenteruser,
     "WebIdentityUser": _get_principal_for_user_identity_type_webidentityuser,
     "SAMLUser": _get_principal_for_user_identity_type_samluser,
-    "Unknown": _get_principal_for_user_identity_type_unknown_or_directory,
-    "Directory": _get_principal_for_user_identity_type_unknown_or_directory,
+    "Unknown": _get_principal_for_user_identity_type_unknown,
+    "Directory": _get_principal_for_user_identity_type_directory,
 }
 
 
