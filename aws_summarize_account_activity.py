@@ -1,6 +1,7 @@
 import argparse
 import boto3
 import botocore.config
+import botocore.exceptions
 import concurrent.futures
 import datetime
 import json
@@ -27,7 +28,7 @@ def get_cloudtrail_activity_for_region(region):
     If configured, dumps a copy of the raw CloudTrail data analyzed.
     """
     cloudtrail_activity = {}
-    boto_session = boto3.session.Session(profile_name=profile, region_name=region)
+    boto_session = boto3.Session(profile_name=profile, region_name=region)
     cloudtrail_client = boto_session.client("cloudtrail", config=BOTO_CLIENT_CONFIG)
     if dump_raw_cloudtrail_data:
         dump_file = open(os.path.join(raw_cloudtrail_data_directory, "{}.jsonl".format(region)), "w")
@@ -165,7 +166,7 @@ if __name__ == "__main__":
     plot_results = args.plot_results
     profile = args.profile[0] if args.profile else None
 
-    boto_session = boto3.session.Session(profile_name=profile, region_name=AWS_DEFAULT_REGION)
+    boto_session = boto3.Session(profile_name=profile, region_name=AWS_DEFAULT_REGION)
 
     # Test for valid credentials
     sts_client = boto_session.client("sts", config=BOTO_CLIENT_CONFIG)
@@ -235,7 +236,7 @@ if __name__ == "__main__":
             region = future_to_region_mapping[future]
             try:
                 add_cloudtrail_activity_to_result_collection(region, future.result())
-            except Exception as ex:
+            except botocore.exceptions.ClientError as ex:
                 error_message = ex.response["Error"]["Code"]
                 print("Failed reading CloudTrail events from region {}: {}".format(region, error_message))
                 result_collection["_metadata"]["regions_failed"][region] = error_message
