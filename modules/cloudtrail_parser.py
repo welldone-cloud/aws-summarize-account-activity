@@ -386,22 +386,6 @@ def _get_principal_for_user_identity_type_directory(user_identity):
     )
 
 
-_PRINCIPAL_EXTRACTION_FUNCTIONS = {
-    "None": _get_principal_for_user_identity_type_none,
-    "IAMUser": _get_principal_for_user_identity_type_iamuser,
-    "AssumedRole": _get_principal_for_user_identity_type_assumedrole,
-    "Root": _get_principal_for_user_identity_type_root,
-    "AWSAccount": _get_principal_for_user_identity_type_awsaccount,
-    "AWSService": _get_principal_for_user_identity_type_awsservice,
-    "FederatedUser": _get_principal_for_user_identity_type_federateduser,
-    "IdentityCenterUser": _get_principal_for_user_identity_type_identitycenteruser,
-    "WebIdentityUser": _get_principal_for_user_identity_type_webidentityuser,
-    "SAMLUser": _get_principal_for_user_identity_type_samluser,
-    "Unknown": _get_principal_for_user_identity_type_unknown,
-    "Directory": _get_principal_for_user_identity_type_directory,
-}
-
-
 def get_principal_from_log_record(log_record):
     """
     Returns the principal that is contained in the "userIdentity" field of the given log record.
@@ -411,12 +395,25 @@ def get_principal_from_log_record(log_record):
         user_identity_type = user_identity["type"]
     except KeyError:
         user_identity_type = "None"
+
+    principal_extraction_functions = {
+        "None": _get_principal_for_user_identity_type_none,
+        "IAMUser": _get_principal_for_user_identity_type_iamuser,
+        "AssumedRole": _get_principal_for_user_identity_type_assumedrole,
+        "Root": _get_principal_for_user_identity_type_root,
+        "AWSAccount": _get_principal_for_user_identity_type_awsaccount,
+        "AWSService": _get_principal_for_user_identity_type_awsservice,
+        "FederatedUser": _get_principal_for_user_identity_type_federateduser,
+        "IdentityCenterUser": _get_principal_for_user_identity_type_identitycenteruser,
+        "WebIdentityUser": _get_principal_for_user_identity_type_webidentityuser,
+        "SAMLUser": _get_principal_for_user_identity_type_samluser,
+        "Unknown": _get_principal_for_user_identity_type_unknown,
+        "Directory": _get_principal_for_user_identity_type_directory,
+    }
     try:
-        principal_extraction_function = _PRINCIPAL_EXTRACTION_FUNCTIONS[user_identity_type]
+        return principal_extraction_functions[user_identity_type](user_identity)
     except KeyError:
         raise ValueError("Unrecognized userIdentity format", log_record)
-
-    return principal_extraction_function(user_identity)
 
 
 def get_api_call_from_log_record(log_record):
@@ -424,6 +421,27 @@ def get_api_call_from_log_record(log_record):
     Returns the API service and action name that is invoked in the given log record.
     """
     return "{}:{}".format(log_record["eventSource"], log_record["eventName"])
+
+
+def get_ip_address_from_log_record(log_record):
+    """
+    Returns the source IP address contained in the given log record. Note that the value returned may
+    not be an actual IP address, but an AWS service name or "AWS Internal".
+    """
+    try:
+        return log_record["sourceIPAddress"]
+    except KeyError:
+        return "Unknown"
+
+
+def get_user_agent_from_log_record(log_record):
+    """
+    Returns the user agent string contained in the given log record.
+    """
+    try:
+        return log_record["userAgent"]
+    except KeyError:
+        return "Unknown"
 
 
 def is_successful_api_call(log_record):

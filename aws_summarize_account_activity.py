@@ -22,89 +22,85 @@ TIMESTAMP_FORMAT = "%Y%m%d%H%M%S"
 SHOW_STATUS_MESSAGE_AFTER_NUMBER_OF_CLOUDTRAIL_LOG_RECORDS = 1000
 
 
-def get_cloudtrail_activity_for_region(region):
+def increase_result_collection_counter(level_1, level_2, level_3):
     """
-    Returns a nested dict describing the configured activity recorded in CloudTrail, for the given region:
-      dict[principal][api_call] = count
-    If configured, dumps a copy of the raw CloudTrail data analyzed.
+    Increases the counter for the given key in the result collection structure by one. If the key does not exist yet,
+    it is created with a value of one.
+    Example invocation:
+      increase_result_collection_counter("api_calls_by_region", "eu-central-1", "ec2.amazonaws.com:DescribeVolumes")
     """
-    cloudtrail_activity = {}
+    try:
+        result_collection[level_1][level_2][level_3] += 1
+    except KeyError:
+        if level_2 not in result_collection[level_1]:
+            result_collection[level_1][level_2] = {}
+        result_collection[level_1][level_2][level_3] = 1
+
+
+def collect_cloudtrail_data_for_region(region):
+    """
+    Collects account activity recorded in CloudTrail for the given region. Adds the collected activity to the overall
+    result collection. If configured, dumps a copy of the raw CloudTrail data fetched.
+    """
     boto_session = boto3.Session(profile_name=profile, region_name=region)
     cloudtrail_client = boto_session.client("cloudtrail", config=BOTO_CLIENT_CONFIG)
+    cloudtrail_paginator = cloudtrail_client.get_paginator("lookup_events")
+    number_of_log_records_processed = -1
     if dump_raw_cloudtrail_data:
         dump_file = open(os.path.join(raw_cloudtrail_data_directory, "{}.jsonl".format(region)), "w")
 
     # Iterate through CloudTrail logs
-    cloudtrail_paginator = cloudtrail_client.get_paginator("lookup_events")
-    number_of_log_records_processed = -1
-    for response_page in cloudtrail_paginator.paginate(StartTime=from_timestamp, EndTime=run_timestamp):
-        for event in response_page["Events"]:
-            number_of_log_records_processed += 1
-            log_record = json.loads(event["CloudTrailEvent"])
+    try:
+        for response_page in cloudtrail_paginator.paginate(StartTime=from_timestamp, EndTime=run_timestamp):
+            for event in response_page["Events"]:
+                number_of_log_records_processed += 1
+                log_record = json.loads(event["CloudTrailEvent"])
 
-            # Show regular status messages
-            if number_of_log_records_processed % SHOW_STATUS_MESSAGE_AFTER_NUMBER_OF_CLOUDTRAIL_LOG_RECORDS == 0:
-                msg = "Reading CloudTrail records from region {}".format(region)
-                if number_of_log_records_processed > 0:
-                    msg += " (count: {}, currently at: {})".format(
-                        number_of_log_records_processed, event["EventTime"].astimezone(datetime.timezone.utc)
-                    )
-                print(msg)
+                # Show regular status messages
+                if number_of_log_records_processed % SHOW_STATUS_MESSAGE_AFTER_NUMBER_OF_CLOUDTRAIL_LOG_RECORDS == 0:
+                    msg = "Reading CloudTrail records from region {}".format(region)
+                    if number_of_log_records_processed > 0:
+                        msg += " (count: {}, currently at: {})".format(
+                            number_of_log_records_processed,
+                            event["EventTime"].astimezone(datetime.timezone.utc).replace(tzinfo=None),
+                        )
+                    print(msg)
 
-            # Dump log record, if configured
-            if dump_raw_cloudtrail_data:
-                dump_file.write("{}\n".format(json.dumps(log_record, separators=(",", ":"))))
+                # Dump log record, if configured
+                if dump_raw_cloudtrail_data:
+                    dump_file.write("{}\n".format(json.dumps(log_record, separators=(",", ":"))))
 
-            # Skip certain types of activity, if configured
-            if activity_type != "ALL":
-                is_successful_api_call = cloudtrail_parser.is_successful_api_call(log_record)
-                if (activity_type == "SUCCESSFUL" and not is_successful_api_call) or (
-                    activity_type == "FAILED" and is_successful_api_call
-                ):
-                    continue
+                # Skip certain types of activity, if configured
+                if activity_type != "ALL":
+                    is_successful_api_call = cloudtrail_parser.is_successful_api_call(log_record)
+                    if (activity_type == "SUCCESSFUL" and not is_successful_api_call) or (
+                        activity_type == "FAILED" and is_successful_api_call
+                    ):
+                        continue
 
-            # Capture log record details
-            principal = cloudtrail_parser.get_principal_from_log_record(log_record)
-            api_call = cloudtrail_parser.get_api_call_from_log_record(log_record)
-            try:
-                cloudtrail_activity[principal][api_call] += 1
-            except KeyError:
-                if principal not in cloudtrail_activity:
-                    cloudtrail_activity[principal] = {}
-                if api_call not in cloudtrail_activity[principal]:
-                    cloudtrail_activity[principal][api_call] = 1
+                # Extract log record details
+                principal = cloudtrail_parser.get_principal_from_log_record(log_record)
+                api_call = cloudtrail_parser.get_api_call_from_log_record(log_record)
+                ip_address = cloudtrail_parser.get_ip_address_from_log_record(log_record)
+                user_agent = cloudtrail_parser.get_user_agent_from_log_record(log_record)
+
+                # Increase counters in the result collection
+                increase_result_collection_counter("api_calls_by_principal", principal, api_call)
+                increase_result_collection_counter("api_calls_by_region", region, api_call)
+                increase_result_collection_counter("ip_addresses_by_principal", principal, ip_address)
+                increase_result_collection_counter("user_agents_by_principal", principal, user_agent)
+
+    except botocore.exceptions.ClientError as ex:
+        error_message = ex.response["Error"]["Code"]
+        print("Failed reading CloudTrail events from region {}: {}".format(region, error_message))
+        result_collection["_metadata"]["regions_failed"][region] = error_message
+        return
+
+    finally:
+        if dump_raw_cloudtrail_data:
+            dump_file.close()
 
     print("Finished region {}".format(region))
-    if dump_raw_cloudtrail_data:
-        dump_file.close()
-    return cloudtrail_activity
-
-
-def add_cloudtrail_activity_to_result_collection(region, regional_cloudtrail_activity):
-    """
-    Adds the given regional activity recorded in CloudTrail to the overall result collection.
-    """
-    for principal in regional_cloudtrail_activity:
-        for api_call in regional_cloudtrail_activity[principal]:
-            count = regional_cloudtrail_activity[principal][api_call]
-
-            # Add to principal results
-            try:
-                result_collection["api_calls_by_principal"][principal][api_call] += count
-            except KeyError:
-                if principal not in result_collection["api_calls_by_principal"]:
-                    result_collection["api_calls_by_principal"][principal] = {}
-                if api_call not in result_collection["api_calls_by_principal"][principal]:
-                    result_collection["api_calls_by_principal"][principal][api_call] = count
-
-            # Add to regional results
-            try:
-                result_collection["api_calls_by_region"][region][api_call] += count
-            except KeyError:
-                if region not in result_collection["api_calls_by_region"]:
-                    result_collection["api_calls_by_region"][region] = {}
-                if api_call not in result_collection["api_calls_by_region"][region]:
-                    result_collection["api_calls_by_region"][region][api_call] = count
 
 
 def parse_argument_past_hours(val):
@@ -137,14 +133,14 @@ if __name__ == "__main__":
         required=False,
         default="ALL",
         choices=["ALL", "SUCCESSFUL", "FAILED"],
-        help="type of CloudTrail activity to summarize: all API calls (default), only successful API calls, or only API calls that AWS declined with an error message",
+        help="type of CloudTrail data to analyze: all API calls (default), only successful API calls, or only API calls that AWS declined with an error message",
     )
     parser.add_argument(
         "--dump-raw-cloudtrail-data",
         required=False,
         default=False,
         action="store_true",
-        help="store a copy of the gathered CloudTrail data in JSONL format",
+        help="store a copy of all gathered CloudTrail data in JSONL format",
     )
     parser.add_argument(
         "--past-hours",
@@ -194,7 +190,7 @@ if __name__ == "__main__":
     enabled_regions = sorted([region["RegionName"] for region in ec2_response["Regions"]])
 
     # Prepare result collection JSON structure
-    run_timestamp = datetime.datetime.utcnow()
+    run_timestamp = datetime.datetime.now(datetime.timezone.utc)
     run_timestamp_str = run_timestamp.strftime(TIMESTAMP_FORMAT)
     from_timestamp = run_timestamp - datetime.timedelta(hours=past_hours)
     from_timestamp_str = from_timestamp.strftime(TIMESTAMP_FORMAT)
@@ -214,6 +210,8 @@ if __name__ == "__main__":
         },
         "api_calls_by_principal": {},
         "api_calls_by_region": {},
+        "ip_addresses_by_principal": {},
+        "user_agents_by_principal": {},
     }
 
     # Prepare results directories
@@ -233,23 +231,12 @@ if __name__ == "__main__":
         )
         os.mkdir(plots_directory)
 
-    # Collect CloudTrail data from all enabled regions
+    # Collect CloudTrail data for all enabled regions
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        future_to_region_mapping = {}
         for region in enabled_regions:
-            future = executor.submit(get_cloudtrail_activity_for_region, region)
-            future_to_region_mapping[future] = region
+            executor.submit(collect_cloudtrail_data_for_region, region)
 
-        for future in concurrent.futures.as_completed(future_to_region_mapping.keys()):
-            region = future_to_region_mapping[future]
-            try:
-                add_cloudtrail_activity_to_result_collection(region, future.result())
-            except botocore.exceptions.ClientError as ex:
-                error_message = ex.response["Error"]["Code"]
-                print("Failed reading CloudTrail events from region {}: {}".format(region, error_message))
-                result_collection["_metadata"]["regions_failed"][region] = error_message
-
-    # Write results and show result locations
+    # Write results and print result locations
     result_file = os.path.join(results_directory, "account_activity_{}_{}.json".format(account_id, run_timestamp_str))
     with open(result_file, "w") as out_file:
         json.dump(result_collection, out_file, indent=2, sort_keys=True)
