@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import argparse
 import boto3
 import botocore.config
@@ -22,7 +24,7 @@ TIMESTAMP_FORMAT = "%Y%m%d%H%M%S"
 SHOW_STATUS_MESSAGE_AFTER_NUMBER_OF_CLOUDTRAIL_LOG_RECORDS = 1000
 
 
-def increase_result_collection_counter(level_1, level_2, level_3):
+def increase_result_collection_counter(result_section, category, key):
     """
     Increases the counter for the given key in the result collection structure by one. If the key does not exist yet,
     it is created with a value of one.
@@ -30,11 +32,11 @@ def increase_result_collection_counter(level_1, level_2, level_3):
       increase_result_collection_counter("api_calls_by_region", "eu-central-1", "ec2.amazonaws.com:DescribeVolumes")
     """
     try:
-        result_collection[level_1][level_2][level_3] += 1
+        result_collection[result_section][category][key] += 1
     except KeyError:
-        if level_2 not in result_collection[level_1]:
-            result_collection[level_1][level_2] = {}
-        result_collection[level_1][level_2][level_3] = 1
+        if category not in result_collection[result_section]:
+            result_collection[result_section][category] = {}
+        result_collection[result_section][category][key] = 1
 
 
 def collect_cloudtrail_data_for_region(region):
@@ -42,11 +44,11 @@ def collect_cloudtrail_data_for_region(region):
     Collects account activity recorded in CloudTrail for the given region. Adds the collected activity to the overall
     result collection. If configured, dumps a copy of the raw CloudTrail data fetched.
     """
-    boto_session = boto3.Session(profile_name=profile, region_name=region)
+    boto_session = boto3.Session(profile_name=args.profile, region_name=region)
     cloudtrail_client = boto_session.client("cloudtrail", config=BOTO_CLIENT_CONFIG)
     cloudtrail_paginator = cloudtrail_client.get_paginator("lookup_events")
     number_of_log_records_processed = -1
-    if dump_raw_cloudtrail_data:
+    if args.dump_raw_cloudtrail_data:
         dump_file = open(os.path.join(raw_cloudtrail_data_directory, "{}.jsonl".format(region)), "w")
 
     # Iterate through CloudTrail logs
@@ -67,14 +69,14 @@ def collect_cloudtrail_data_for_region(region):
                     print(msg)
 
                 # Dump log record, if configured
-                if dump_raw_cloudtrail_data:
+                if args.dump_raw_cloudtrail_data:
                     dump_file.write("{}\n".format(json.dumps(log_record, separators=(",", ":"))))
 
                 # Skip certain types of activity, if configured
-                if activity_type != "ALL":
+                if args.activity_type != "ALL":
                     is_successful_api_call = cloudtrail_parser.is_successful_api_call(log_record)
-                    if (activity_type == "SUCCESSFUL" and not is_successful_api_call) or (
-                        activity_type == "FAILED" and is_successful_api_call
+                    if (args.activity_type == "SUCCESSFUL" and not is_successful_api_call) or (
+                        args.activity_type == "FAILED" and is_successful_api_call
                     ):
                         continue
 
@@ -97,7 +99,7 @@ def collect_cloudtrail_data_for_region(region):
         return
 
     finally:
-        if dump_raw_cloudtrail_data:
+        if args.dump_raw_cloudtrail_data:
             dump_file.close()
 
     print("Finished region {}".format(region))
@@ -118,7 +120,7 @@ if __name__ == "__main__":
     if sys.version_info[0] < 3:
         print("Python version 3 required")
         sys.exit(1)
-    with open("requirements.txt") as requirements_file:
+    with open("requirements.txt", "r") as requirements_file:
         try:
             for package in requirements_file.read().splitlines():
                 pkg_resources.require(package)
@@ -130,49 +132,40 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--activity-type",
-        required=False,
         default="ALL",
         choices=["ALL", "SUCCESSFUL", "FAILED"],
         help="type of CloudTrail data to analyze: all API calls (default), only successful API calls, or only API calls that AWS declined with an error message",
     )
     parser.add_argument(
         "--dump-raw-cloudtrail-data",
-        required=False,
         default=False,
         action="store_true",
         help="store a copy of all gathered CloudTrail data in JSONL format",
     )
     parser.add_argument(
         "--past-hours",
-        required=False,
-        nargs=1,
-        default=[336],
+        default=336,
         type=parse_argument_past_hours,
         help="hours of CloudTrail data to look back and analyze, default: 336 (=14 days), minimum: 1, maximum: 2160 (=90 days)",
     )
     parser.add_argument(
         "--plot-results",
-        required=False,
         default=False,
         action="store_true",
         help="generate PNG files that visualize the JSON output file",
     )
     parser.add_argument(
         "--profile",
-        required=False,
-        nargs=1,
         help="named AWS profile to use when running the command",
     )
     args = parser.parse_args()
-    activity_type = args.activity_type
-    dump_raw_cloudtrail_data = args.dump_raw_cloudtrail_data
-    past_hours = args.past_hours[0]
-    plot_results = args.plot_results
-    profile = args.profile[0] if args.profile else None
-
-    boto_session = boto3.Session(profile_name=profile, region_name=AWS_DEFAULT_REGION)
 
     # Test for valid credentials
+    try:
+        boto_session = boto3.Session(profile_name=args.profile, region_name=AWS_DEFAULT_REGION)
+    except botocore.exceptions.ProfileNotFound as ex:
+        print("Error: {}".format(ex))
+        sys.exit(1)
     sts_client = boto_session.client("sts", config=BOTO_CLIENT_CONFIG)
     try:
         sts_response = sts_client.get_caller_identity()
@@ -192,13 +185,13 @@ if __name__ == "__main__":
     # Prepare result collection JSON structure
     run_timestamp = datetime.datetime.now(datetime.timezone.utc)
     run_timestamp_str = run_timestamp.strftime(TIMESTAMP_FORMAT)
-    from_timestamp = run_timestamp - datetime.timedelta(hours=past_hours)
+    from_timestamp = run_timestamp - datetime.timedelta(hours=args.past_hours)
     from_timestamp_str = from_timestamp.strftime(TIMESTAMP_FORMAT)
     result_collection = {
         "_metadata": {
             "account_id": account_id,
             "account_principal": account_principal,
-            "activity_type": activity_type,
+            "activity_type": args.activity_type,
             "cloudtrail_data_analyzed": {
                 "from_timestamp": from_timestamp_str,
                 "to_timestamp": run_timestamp_str,
@@ -220,12 +213,12 @@ if __name__ == "__main__":
         os.mkdir(results_directory)
     except FileExistsError:
         pass
-    if dump_raw_cloudtrail_data:
+    if args.dump_raw_cloudtrail_data:
         raw_cloudtrail_data_directory = os.path.join(
             results_directory, "account_activity_{}_{}_raw_cloudtrail_data".format(account_id, run_timestamp_str)
         )
         os.mkdir(raw_cloudtrail_data_directory)
-    if plot_results:
+    if args.plot_results:
         plots_directory = os.path.join(
             results_directory, "account_activity_{}_{}_plots".format(account_id, run_timestamp_str)
         )
@@ -241,9 +234,9 @@ if __name__ == "__main__":
     with open(result_file, "w") as out_file:
         json.dump(result_collection, out_file, indent=2, sort_keys=True)
     print("Output file written to {}".format(result_file))
-    if dump_raw_cloudtrail_data:
+    if args.dump_raw_cloudtrail_data:
         print("Raw CloudTrail data written to {}".format(raw_cloudtrail_data_directory))
-    if plot_results:
+    if args.plot_results:
         if not result_collection["api_calls_by_principal"]:
             print("No API call activity to plot")
         else:
