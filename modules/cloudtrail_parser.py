@@ -166,8 +166,18 @@ def _get_principal_for_user_identity_type_awsaccount(user_identity):
             "principalId": "AIDAQRSTUVWXYZEXAMPLE",
             "accountId": "112233445566"
         }
+
+        "userIdentity": {
+            "type": "AWSAccount",
+            "principalId": "AIDAQRSTUVWXYZEXAMPLE:f592575d-41d2-4f1c-a1ef-cfd7dbb52aef",
+            "accountId": "112233445566",
+            "invokedBy": "cloudformation.amazonaws.com"
+        }
     """
-    return user_identity["accountId"]
+    try:
+        return user_identity["invokedBy"]
+    except KeyError:
+        return user_identity["accountId"]
 
 
 def _get_principal_for_user_identity_type_awsservice(user_identity):
