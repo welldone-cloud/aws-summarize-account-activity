@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import pathlib
 import pkg_resources
 import re
 import sys
@@ -18,7 +19,7 @@ if __name__ == "__main__":
     if sys.version_info[0] < 3:
         print("Python version 3 required")
         sys.exit(1)
-    with open("requirements.txt") as requirements_file:
+    with open(os.path.join(pathlib.Path(__file__).parent, "requirements.txt"), "r") as requirements_file:
         try:
             for package in requirements_file.read().splitlines():
                 pkg_resources.require(package)
