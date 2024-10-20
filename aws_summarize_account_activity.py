@@ -18,7 +18,10 @@ from modules import cloudtrail_plotter
 
 AWS_DEFAULT_REGION = "us-east-1"
 
-BOTO_CLIENT_CONFIG = botocore.config.Config(retries={"total_max_attempts": 5, "mode": "standard"})
+BOTO_CLIENT_CONFIG = botocore.config.Config(
+    retries={"total_max_attempts": 5, "mode": "standard"},
+    user_agent_appid="aws-summarize-account-activity",
+)
 
 TIMESTAMP_FORMAT = "%Y%m%d%H%M%S"
 
