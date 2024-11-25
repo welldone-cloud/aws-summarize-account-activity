@@ -349,6 +349,17 @@ def _get_principal_for_user_identity_type_unknown(user_identity):
             "accountId": "112233445566",
             "userName": "user@example.com"
         }
+
+        "userIdentity": {
+            "type": "Unknown",
+            "userName": "someuser",
+            "accountId": "112233445566",
+            "principalId": "112233445566",
+            "onBehalfOf": {
+                "userId": "111111-1111-1111-1111-111111111111",
+                "identityStoreArn": "arn:aws:identitystore::111111111:identitystore/d-111111111"
+            }
+        }
     """
     try:
         arn = user_identity["arn"]
@@ -366,7 +377,11 @@ def _get_principal_for_user_identity_type_unknown(user_identity):
             raise KeyError()
     except KeyError:
         try:
-            return user_identity["invokedBy"]
+            return "{}:identitycenteruser/{}/{}".format(
+                user_identity["accountId"],
+                user_identity["onBehalfOf"]["identityStoreArn"].split("/")[-1],
+                user_identity["onBehalfOf"]["userId"],
+            )
         except KeyError:
             pass
         try:
