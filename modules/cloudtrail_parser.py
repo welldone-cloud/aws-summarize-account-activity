@@ -154,6 +154,20 @@ def _get_principal_for_user_identity_type_root(user_identity):
                 }
             }
         }
+
+        "userIdentity": {
+            "type": "Root",
+            "principalId": "112233445566",
+            "arn": "arn:aws:iam::112233445566:root",
+            "accountId": "112233445566",
+            "accessKeyId": "ASIAIOEXAMPLE",
+            "sessionContext": {
+                "attributes": {
+                    "creationDate": "2024-10-25T20:00:11Z",
+                    "mfaAuthenticated": "false"
+                }
+            }
+        }
     """
     return "{}:root".format(user_identity["accountId"])
 
