@@ -462,6 +462,20 @@ def get_api_call_from_log_record(log_record):
     return "{}:{}".format(log_record["eventSource"], log_record["eventName"])
 
 
+def get_error_code_from_log_record(log_record):
+    """
+    Returns the error code contained in the given log record or None if there is no error code.
+    """
+    try:
+        return "{}:{}".format(log_record["eventSource"], log_record["errorCode"])
+    except KeyError:
+        pass
+    try:
+        return "{}:{}".format(log_record["eventSource"], log_record["responseElements"]["errorCode"])
+    except (KeyError, TypeError):
+        return None
+
+
 def get_ip_address_from_log_record(log_record):
     """
     Returns the source IP address contained in the given log record. Note that the value returned may

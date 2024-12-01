@@ -177,6 +177,15 @@ Truncated example JSON output file:
     },
     // ...
   },
+  "error_codes_by_principal": {
+    "123456789012:user/alice": {
+      "cloudcontrolapi.amazonaws.com:ThrottlingException": 71,
+      "ram.amazonaws.com:InvalidParameterException": 5,
+      "ram.amazonaws.com:ResourceArnNotFoundException": 4,
+      "s3.amazonaws.com:AccessDenied": 9
+    },
+    // ...
+  },
   "ip_addresses_by_principal": {
     "123456789012:user/alice": {
       "188.22.117.122": 2383,

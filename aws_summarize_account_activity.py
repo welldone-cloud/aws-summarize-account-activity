@@ -11,6 +11,7 @@ import os
 import pathlib
 import pkg_resources
 import sys
+import traceback
 
 from modules import cloudtrail_parser
 from modules import cloudtrail_plotter
@@ -89,17 +90,26 @@ def collect_cloudtrail_data_for_region(region):
                 api_call = cloudtrail_parser.get_api_call_from_log_record(log_record)
                 ip_address = cloudtrail_parser.get_ip_address_from_log_record(log_record)
                 user_agent = cloudtrail_parser.get_user_agent_from_log_record(log_record)
+                error_code = cloudtrail_parser.get_error_code_from_log_record(log_record)
 
                 # Increase counters in the result collection
                 increase_result_collection_counter("api_calls_by_principal", principal, api_call)
                 increase_result_collection_counter("api_calls_by_region", region, api_call)
                 increase_result_collection_counter("ip_addresses_by_principal", principal, ip_address)
                 increase_result_collection_counter("user_agents_by_principal", principal, user_agent)
+                if error_code:
+                    increase_result_collection_counter("error_codes_by_principal", principal, error_code)
 
     except botocore.exceptions.ClientError as ex:
         error_message = ex.response["Error"]["Code"]
         print("Failed reading CloudTrail events from region {}: {}".format(region, error_message))
         result_collection["_metadata"]["regions_failed"][region] = error_message
+        return
+
+    except Exception as ex:
+        print("Unexpected error in region {}.".format(region))
+        print("Please report this as an issue along with the stack trace information.")
+        print(traceback.format_exc())
         return
 
     finally:
@@ -209,6 +219,7 @@ if __name__ == "__main__":
         "api_calls_by_region": {},
         "ip_addresses_by_principal": {},
         "user_agents_by_principal": {},
+        "error_codes_by_principal": {},
     }
 
     # Prepare results directories

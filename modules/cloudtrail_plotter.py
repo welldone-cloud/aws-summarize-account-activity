@@ -5,6 +5,8 @@ import string
 
 _PLOT_CANVAS_SIZE = (14, 8)
 
+_PLOT_COLOR = "#e4af00"
+
 _PLOT_MAX_ITEMS = 50
 
 _PLOT_MAX_LENGTH_X_AXIS_LABELS = 85
@@ -16,65 +18,120 @@ def generate_plot_files(data, output_directory):
     """
 
     # API calls by principal summary
-    plot_title = "API calls by principal summary"
     data_to_plot = {
         principal: sum(data["api_calls_by_principal"][principal].values())
         for principal in data["api_calls_by_principal"]
     }
-    _write_data_to_plot_file(plot_title, data_to_plot, output_directory, "api_calls_by_principal_summary")
+    _write_plot_file(
+        "API calls by principal summary",
+        data_to_plot,
+        output_directory,
+        "api_calls_by_principal_summary",
+    )
 
     # API calls by principal
     api_calls_by_principal_dir = os.path.join(output_directory, "api_calls_by_principal")
     os.mkdir(api_calls_by_principal_dir)
     for principal in data["api_calls_by_principal"]:
-        plot_title = "API calls by principal '{}'".format(principal)
         data_to_plot = data["api_calls_by_principal"][principal]
-        _write_data_to_plot_file(plot_title, data_to_plot, api_calls_by_principal_dir, principal)
+        _write_plot_file(
+            "API calls by principal '{}'".format(principal),
+            data_to_plot,
+            api_calls_by_principal_dir,
+            principal,
+        )
 
     # API calls by region summary
-    plot_title = "API calls by region summary"
     data_to_plot = {
         region: sum(data["api_calls_by_region"][region].values()) for region in data["api_calls_by_region"]
     }
-    _write_data_to_plot_file(plot_title, data_to_plot, output_directory, "api_calls_by_region_summary")
+    _write_plot_file(
+        "API calls by region summary",
+        data_to_plot,
+        output_directory,
+        "api_calls_by_region_summary",
+    )
 
     # API calls by region
     api_calls_by_region_dir = os.path.join(output_directory, "api_calls_by_region")
     os.mkdir(api_calls_by_region_dir)
     for region in data["api_calls_by_region"]:
-        plot_title = "API calls by region '{}'".format(region)
         data_to_plot = data["api_calls_by_region"][region]
-        _write_data_to_plot_file(plot_title, data_to_plot, api_calls_by_region_dir, region)
+        _write_plot_file(
+            "API calls by region '{}'".format(region),
+            data_to_plot,
+            api_calls_by_region_dir,
+            region,
+        )
 
     # IP addresses by principal summary
-    plot_title = "IP addresses by principal summary"
     data_to_plot = {
         principal: len(data["ip_addresses_by_principal"][principal]) for principal in data["ip_addresses_by_principal"]
     }
-    _write_data_to_plot_file(plot_title, data_to_plot, output_directory, "ip_addresses_by_principal_summary")
+    _write_plot_file(
+        "IP addresses by principal summary",
+        data_to_plot,
+        output_directory,
+        "ip_addresses_by_principal_summary",
+    )
 
     # IP addresses by principal
     ip_addresses_by_principal_dir = os.path.join(output_directory, "ip_addresses_by_principal")
     os.mkdir(ip_addresses_by_principal_dir)
     for principal in data["ip_addresses_by_principal"]:
-        plot_title = "IP addresses by principal '{}'".format(principal)
         data_to_plot = data["ip_addresses_by_principal"][principal]
-        _write_data_to_plot_file(plot_title, data_to_plot, ip_addresses_by_principal_dir, principal)
+        _write_plot_file(
+            "IP addresses by principal '{}'".format(principal),
+            data_to_plot,
+            ip_addresses_by_principal_dir,
+            principal,
+        )
 
     # User agents by principal summary
-    plot_title = "User agents by principal summary"
     data_to_plot = {
         principal: len(data["user_agents_by_principal"][principal]) for principal in data["user_agents_by_principal"]
     }
-    _write_data_to_plot_file(plot_title, data_to_plot, output_directory, "user_agents_by_principal_summary")
+    _write_plot_file(
+        "User agents by principal summary",
+        data_to_plot,
+        output_directory,
+        "user_agents_by_principal_summary",
+    )
 
     # User agents by principal
     user_agents_by_principal_dir = os.path.join(output_directory, "user_agents_by_principal")
     os.mkdir(user_agents_by_principal_dir)
     for principal in data["user_agents_by_principal"]:
-        plot_title = "User agents by principal '{}'".format(principal)
         data_to_plot = data["user_agents_by_principal"][principal]
-        _write_data_to_plot_file(plot_title, data_to_plot, user_agents_by_principal_dir, principal)
+        _write_plot_file(
+            "User agents by principal '{}'".format(principal),
+            data_to_plot,
+            user_agents_by_principal_dir,
+            principal,
+        )
+
+    # Error codes by principal summary
+    data_to_plot = {
+        principal: len(data["error_codes_by_principal"][principal]) for principal in data["error_codes_by_principal"]
+    }
+    _write_plot_file(
+        "Error codes by principal summary",
+        data_to_plot,
+        output_directory,
+        "error_codes_by_principal_summary",
+    )
+
+    # Error codes by principal
+    error_codes_by_principal_dir = os.path.join(output_directory, "error_codes_by_principal")
+    os.mkdir(error_codes_by_principal_dir)
+    for principal in data["error_codes_by_principal"]:
+        data_to_plot = data["error_codes_by_principal"][principal]
+        _write_plot_file(
+            "Error codes by principal '{}'".format(principal),
+            data_to_plot,
+            error_codes_by_principal_dir,
+            principal,
+        )
 
 
 def _dict_to_sorted_tuples(val, max_items):
@@ -115,21 +172,27 @@ def _truncate_str(val, max_length, truncation_sequence="[...]"):
     return val
 
 
-def _write_data_to_plot_file(plot_title, dict_to_plot, output_directory, output_file_stem):
+def _write_plot_file(plot_title, dict_to_plot, output_directory, output_file_name):
     """
     Writes a bar chart PNG file. The given dict keys represent the x axis data, the dict values the y axis. Characters
-    of the given output file stem may be replaced to ensure valid file names.
+    of the given output file name may be replaced to ensure valid file names.
     """
     plot_title = "{} (max. entries: {})".format(plot_title, _PLOT_MAX_ITEMS)
-    x_axis, y_axis = _dict_to_sorted_tuples(dict_to_plot, _PLOT_MAX_ITEMS)
+    try:
+        x_axis, y_axis = _dict_to_sorted_tuples(dict_to_plot, _PLOT_MAX_ITEMS)
+    except ValueError:
+        # The data to plot is empty
+        x_axis, y_axis = (), ()
     x_axis = tuple(_truncate_str(val, _PLOT_MAX_LENGTH_X_AXIS_LABELS) for val in x_axis)
-    output_file = os.path.join(output_directory, _str_to_filename(output_file_stem) + ".png")
+    output_file = os.path.join(output_directory, _str_to_filename(output_file_name) + ".png")
 
     plt.figure(figsize=_PLOT_CANVAS_SIZE)
     plt.title(plot_title, wrap=True)
     plt.gca().yaxis.get_major_locator().set_params(integer=True)
     plt.xticks(rotation=90)
-    plt.bar(range(len(x_axis)), y_axis, tick_label=x_axis, color="#e4af00")
+    plt.bar(range(len(x_axis)), y_axis, tick_label=x_axis, color=_PLOT_COLOR)
+    if not x_axis:
+        plt.gca().set_ylim(bottom=0, top=1)
     plt.tight_layout()
     plt.savefig(output_file)
     plt.close()
