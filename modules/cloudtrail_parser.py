@@ -26,6 +26,15 @@ def _get_principal_for_user_identity_type_iamuser(user_identity):
     Examples:
         "userIdentity": {
             "type": "IAMUser",
+            "principalId": "AIDAXIDPCKD31IR6W1TAD",
+            "arn": "arn:aws:iam::112233445566:user/testuser",
+            "accountId": "112233445566",
+            "accessKeyId": "AKIAXIDPCD3KJP5JWMX",
+            "userName": "testuser"
+        }
+
+        "userIdentity": {
+            "type": "IAMUser",
             "principalId": "AIDAQD7C323UJRJN7AQDK",
             "arn": "arn:aws:iam::112233445566:user/username",
             "accountId": "112233445566",
@@ -39,6 +48,22 @@ def _get_principal_for_user_identity_type_iamuser(user_identity):
                     "mfaAuthenticated": "false"
                 }
             }
+        }
+
+        "userIdentity": {
+            "type": "IAMUser",
+            "principalId": "AIDAQD7C323UJRJN7AQDK",
+            "arn": "arn:aws:iam::112233445566:user/testuser",
+            "accountId": "112233445566",
+            "accessKeyId": "AIDAQD7C323UJRJN7AQDK",
+            "userName": "testuser",
+            "sessionContext": {
+                "attributes": {
+                    "creationDate": "2024-12-20T09:57:36Z",
+                    "mfaAuthenticated": "false"
+                }
+            },
+            "invokedBy": "secretsmanager.amazonaws.com"
         }
 
         "userIdentity": {
