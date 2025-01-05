@@ -1,2 +1,3 @@
-boto3 >=1.34.44, <2.0.0
-matplotlib >=3.7.1, <4.0.0
+boto3 >= 1.34.44
+matplotlib >= 3.7.1
+packaging >= 24.2

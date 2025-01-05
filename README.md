@@ -10,11 +10,15 @@ variables](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvar
 profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html) in the optional `--profile` 
 argument.
 
-Example run:
+Install dependencies:
 
 ```bash
 pip install -r requirements.txt
+```
 
+Example invocation:
+
+```bash
 python aws_summarize_account_activity.py
 ```
 
@@ -55,8 +59,6 @@ All arguments are optional:
 
 * The script analyzes management events that were logged to CloudTrail. Please note that there are AWS APIs that do not log to CloudTrail: logging support varies from service to service. 
 
-* The script can only analyze those AWS regions that are currently enabled in the target account.
-
 
 ## Minimum IAM permissions required
 
@@ -87,10 +89,10 @@ Truncated example JSON output file:
     "account_principal": "arn:aws:iam::123456789012:user/myuser",
     "activity_type": "ALL",
     "cloudtrail_data_analyzed": {
-      "from_timestamp": "20240417081834",
-      "to_timestamp": "20240217081834"
+      "from_timestamp": "20250103140755",
+      "to_timestamp": "20250105140755"
     },
-    "invocation": "aws_summarize_account_activity.py --plot-results",
+    "invocation": "aws_summarize_account_activity.py --past-hours 48 --plot-results",
     "regions_enabled": [
       "af-south-1",
       "ap-northeast-1",
@@ -112,7 +114,7 @@ Truncated example JSON output file:
       "us-west-2"
     ],
     "regions_failed": {},
-    "run_timestamp": "20240217081834"
+    "run_timestamp": "20250105140755"
   },
   "api_calls_by_principal": {
     "arn:aws:iam::123456789012:user/myuser": {
@@ -230,6 +232,6 @@ When using the optional `--plot-results` argument, visualizations of the JSON ou
 If you have an existing JSON output file from a previous run and want to generate PNG visualizations for it, you can do so via:
 
 ```bash
-python generate_plots_for_existing_json_file.py --file account_activity_123456789012_20240217081834.json
+python generate_plots_for_existing_json_file.py --file account_activity_123456789012_20250105140755.json
 ```
 
