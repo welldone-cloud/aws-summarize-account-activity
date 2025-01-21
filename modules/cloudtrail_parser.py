@@ -29,7 +29,7 @@ def _get_principal_for_user_identity_type_iamuser(user_identity):
             "principalId": "AIDAXIDPCKD31IR6W1TAD",
             "arn": "arn:aws:iam::112233445566:user/testuser",
             "accountId": "112233445566",
-            "accessKeyId": "AKIAXIDPCD3KJP5JWMX",
+            "accessKeyId": "AKIAXIDPCD3KEXAMPLE",
             "userName": "testuser"
         }
 
@@ -38,7 +38,7 @@ def _get_principal_for_user_identity_type_iamuser(user_identity):
             "principalId": "AIDAQD7C323UJRJN7AQDK",
             "arn": "arn:aws:iam::112233445566:user/username",
             "accountId": "112233445566",
-            "accessKeyId": "ASIAQD7C323UAXEPER6Y",
+            "accessKeyId": "ASIAQD7C323UAEXAMPLE",
             "userName": "username",
             "sessionContext": {
                 "sessionIssuer": {},
@@ -85,7 +85,7 @@ def _get_principal_for_user_identity_type_assumedrole(user_identity):
             "principalId": "AROADK7C2S3AD43XKJY6V:sessionname",
             "arn": "arn:aws:sts::112233445566:assumed-role/OrganizationAccountAccessRole/sessionname",
             "accountId": "112233445566",
-            "accessKeyId": "ASIAQK7C5S3UNSYONYYD",
+            "accessKeyId": "ASIAQK7C5S3UNEXAMPLE",
             "sessionContext": {
                 "sessionIssuer": {
                     "type": "Role",
@@ -114,7 +114,7 @@ def _get_principal_for_user_identity_type_assumedrole(user_identity):
             "principalId": "AROA2DRSAPBKO6NKMASFM:user@example.com",
             "arn": "arn:aws:iam::112233445566:role/aws-reserved/sso.amazonaws.com/eu-central-1/AWSReservedSSO_AdministratorAccess_ccf1d4a38ab69010",
             "accountId": "112233445566",
-            "accessKeyId": "ASIA2XDS1PBSLKBFKGOW"
+            "accessKeyId": "ASIA2XDS1PBSLEXAMPLE"
         }
 
         "userIdentity": {
@@ -122,7 +122,7 @@ def _get_principal_for_user_identity_type_assumedrole(user_identity):
             "principalId": "112233445566:aws:ec2-instance:i-0784406a8a14355fe",
             "arn": "arn:aws:sts::112233445566:assumed-role/aws:ec2-instance/i-0784406a8a14355fe",
             "accountId": "112233445566",
-            "accessKeyId": "ASIA2KRS2PBAF3VD1735",
+            "accessKeyId": "ASIA2KRS2PBAFEXAMPLE",
             "sessionContext": {
                 "sessionIssuer": {
                     "type": "Role",
@@ -185,7 +185,7 @@ def _get_principal_for_user_identity_type_root(user_identity):
             "principalId": "112233445566",
             "arn": "arn:aws:iam::112233445566:root",
             "accountId": "112233445566",
-            "accessKeyId": "ASIAIOEXAMPLE",
+            "accessKeyId": "ASIAQD7C323UAEXAMPLE",
             "sessionContext": {
                 "attributes": {
                     "creationDate": "2024-10-25T20:00:11Z",
@@ -360,7 +360,7 @@ def _get_principal_for_user_identity_type_unknown(user_identity):
             "principalId": "AIDACQE7PABE4SCFBIF4Q",
             "arn": "arn:aws:iam::112233445566:user/user@example.com",
             "accountId": "112233445566",
-            "accessKeyId": "AKIABBEB1VB23GKSO6VD",
+            "accessKeyId": "AKIABBEB1VB23EXAMPLE",
             "userName": "user@example.com"
         }
 
