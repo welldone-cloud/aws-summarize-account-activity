@@ -139,6 +139,31 @@ def _get_principal_for_user_identity_type_assumedrole(user_identity):
                 "ec2RoleDelivery": "2.0"
             }
         }
+
+        "userIdentity": {
+            "type": "AssumedRole",
+            "principalId": "AROA2XRS6PCBSRQW742QV:TestFunction",
+            "arn": "arn:aws:sts::112233445566:assumed-role/LambdaBasicExecutionRole/TestFunction",
+            "accountId": "112233445566",
+            "accessKeyId": "ASIA2XRS6PBSDEXAMPLE",
+            "sessionContext": {
+                "sessionIssuer": {
+                    "type": "Role",
+                    "principalId": "AROA2XRS6PCBSRQW742QV",
+                    "arn": "arn:aws:iam::112233445566:role/LambdaBasicExecutionRole",
+                    "accountId": "112233445566",
+                    "userName": "LambdaBasicExecutionRole"
+                },
+                "attributes": {
+                    "creationDate": "2025-01-24T11:04:57Z",
+                    "mfaAuthenticated": "false"
+                }
+            },
+            "inScopeOf": {
+                "issuerType": "AWS::Lambda::Function",
+                "credentialsIssuedTo": "arn:aws:lambda:eu-central-1:112233445566:function:TestFunction"
+            }
+        }
     """
     try:
         arn = user_identity["sessionContext"]["sessionIssuer"]["arn"]
@@ -225,6 +250,11 @@ def _get_principal_for_user_identity_type_awsservice(user_identity):
         "userIdentity": {
             "type": "AWSService",
             "invokedBy": "eks.amazonaws.com"
+        }
+
+        "userIdentity": {
+            "type": "AWSService",
+            "invokedBy": "AWS Internal"
         }
     """
     return user_identity["invokedBy"]
