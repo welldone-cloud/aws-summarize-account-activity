@@ -330,9 +330,20 @@ def _get_principal_for_user_identity_type_webidentityuser(user_identity):
             "userName": "organization:my-organization:project:my-project:workspace:terraform-cloud:run_phase:plan",
             "identityProvider": "arn:aws:iam::112233445566:oidc-provider/app.terraform.io"
         }
+
+        "userIdentity": {
+            "type": "WebIdentityUser",
+            "accountId": "112233445566",
+            "accessKeyId": "ASIAQD7C323UAEXAMPLE"
+        }
     """
-    user_identifier = user_identity["principalId"].split("/", 1)[1]
-    return "oidc:{}".format(user_identifier)
+    if "principalId" in user_identity:
+        user_identifier = user_identity["principalId"].split("/", 1)[1]
+        return "oidc:{}".format(user_identifier)
+    elif "accountId" in user_identity:
+        return user_identity["accountId"]
+    else:
+        raise ValueError(user_identity)
 
 
 def _get_principal_for_user_identity_type_samluser(user_identity):
