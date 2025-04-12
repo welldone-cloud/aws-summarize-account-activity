@@ -243,7 +243,7 @@ if __name__ == "__main__":
         os.mkdir(plots_directory)
 
     # Collect CloudTrail data for all enabled regions
-    with concurrent.futures.ThreadPoolExecutor() as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(enabled_regions)) as executor:
         for region in enabled_regions:
             executor.submit(collect_cloudtrail_data_for_region, region)
 

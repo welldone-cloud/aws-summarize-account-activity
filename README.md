@@ -10,7 +10,7 @@ variables](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvar
 profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html) in the optional `--profile` 
 argument.
 
-Install dependencies:
+Ensure you run at least Python 3.10 (or newer) and install dependencies:
 
 ```bash
 pip install -r requirements.txt
